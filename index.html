@@ -6,87 +6,89 @@
 <title>Penalty Shoot-out</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a1a0a;user-select:none;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a1424;user-select:none;}
 #app{position:relative;width:100vw;height:100vh;overflow:hidden;}
 #stage{position:absolute;inset:0;}
 body.shake #stage{animation:shake 220ms ease-out;}
 @keyframes shake{0%,100%{transform:translate(0,0);}20%{transform:translate(-3px,1px);}40%{transform:translate(3px,-1px);}60%{transform:translate(-2px,2px);}80%{transform:translate(2px,-2px);}}
 
-/* stadium bg fills full screen */
-#stadiumBg{position:absolute;inset:0;width:100%;height:100%;}
+/* main scene SVG fills screen */
+#scene{position:absolute;inset:0;width:100%;height:100%;}
 
-/* game SVG container — centred, keeps aspect ratio */
-#pitchWrap{
-  position:absolute;left:50%;top:50%;
-  transform:translate(-50%,-50%);
-  width:min(100vw, calc(100vh * 16/9));
-  aspect-ratio:16/9;
+/* SVG keeper transform — inner group gets the delta, wrapper stays at base pos */
+#keeper{
+  transform-box:fill-box;
+  transform-origin:50% 78%;
+  transition:transform 320ms cubic-bezier(.2,.85,.3,1);
 }
-#pitchSvg{width:100%;height:100%;display:block;overflow:visible;}
+#scene.dragmode{cursor:grab;}
+#scene.dragmode:active{cursor:grabbing;}
 
-/* keeper cursor during dive phase */
-#pitchWrap.keeper-mode{cursor:crosshair;}
-
-/* HUD */
-.hud{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:18px;z-index:10;pointer-events:none;}
-.team-pill{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.55);color:#fff;padding:7px 14px;border-radius:30px;font-weight:700;letter-spacing:1px;text-transform:uppercase;font-size:13px;backdrop-filter:blur(4px);}
-.flag{font-size:17px;}
+/* ── SCOREBOARD HUD (top, stadium-style) ── */
+.scoreboard{position:absolute;top:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:18px;
+  background:linear-gradient(to bottom,#16181c 0%,#0a0c10 100%);
+  border:2px solid #3a3a3a;border-top-color:#5a5a5a;border-radius:10px;padding:10px 22px;z-index:10;pointer-events:none;
+  box-shadow:inset 0 0 16px rgba(255,180,40,0.08),0 6px 24px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.04);}
+.scoreboard::before,.scoreboard::after{content:'';width:8px;height:8px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#ff3333,#660000);box-shadow:0 0 6px rgba(255,80,80,0.8);position:absolute;top:50%;transform:translateY(-50%);}
+.scoreboard::before{left:-15px;} .scoreboard::after{right:-15px;}
+.tm{display:flex;align-items:center;gap:10px;font-family:'Courier New',Menlo,monospace;color:#ffc857;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;font-size:13px;text-shadow:0 0 6px rgba(255,200,80,0.5);}
+.tm .flag{font-size:18px;text-shadow:none;}
 .dots{display:flex;gap:5px;}
-.dot{width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,0.3);border:2px solid rgba(0,0,0,0.3);}
-.dot.g{background:#22c55e;} .dot.m{background:#e23b3b;}
-.vs{color:#fff;font-weight:900;font-size:15px;}
-#banner{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);color:#fff;padding:5px 16px;border-radius:18px;font-size:12px;letter-spacing:2px;text-transform:uppercase;z-index:10;pointer-events:none;white-space:nowrap;}
+.dot{width:13px;height:13px;border-radius:50%;background:rgba(255,255,255,0.18);border:1.5px solid rgba(0,0,0,0.4);}
+.dot.g{background:#22c55e;box-shadow:0 0 6px #22c55e,inset 0 0 3px rgba(255,255,255,0.5);border-color:#16a34a;}
+.dot.m{background:#ef4444;box-shadow:0 0 6px #ef4444,inset 0 0 3px rgba(255,255,255,0.5);border-color:#b91c1c;}
+.vs{color:#ffc857;font-weight:900;font-family:'Courier New',monospace;font-size:16px;letter-spacing:3px;text-shadow:0 0 8px rgba(255,200,80,0.6);}
+
+#banner{position:absolute;top:76px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;padding:6px 18px;border-radius:18px;font-size:12px;letter-spacing:2px;text-transform:uppercase;z-index:10;pointer-events:none;white-space:nowrap;border:1px solid rgba(255,200,80,0.3);}
 
 /* power meter */
-#powerWrap{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.6);border-radius:14px;padding:10px 16px;z-index:10;pointer-events:none;text-align:center;}
-#powerWrap .lbl{color:rgba(255,255,255,0.7);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
-.bar-v{position:relative;width:22px;height:80px;background:linear-gradient(0deg,#a3e635 0%,#facc15 40%,#f97316 70%,#ef4444 100%);border-radius:8px;margin:0 auto;overflow:hidden;}
+#powerWrap{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.65);border-radius:14px;padding:10px 16px;z-index:10;pointer-events:none;text-align:center;border:1px solid rgba(255,200,80,0.3);}
+#powerWrap .lbl{color:rgba(255,200,80,0.8);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;font-family:'Courier New',monospace;font-weight:700;}
+.bar-v{position:relative;width:22px;height:80px;background:linear-gradient(0deg,#a3e635,#facc15 40%,#f97316 70%,#ef4444);border-radius:8px;margin:0 auto;overflow:hidden;}
 .bar-v .mk{position:absolute;left:-3px;right:-3px;height:4px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px #000;}
 
-/* dive instructions */
-#diveHint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.72);color:#fff;padding:16px 28px;border-radius:14px;font-size:20px;font-weight:800;letter-spacing:2px;text-align:center;z-index:10;pointer-events:none;}
-#diveTimer{font-size:13px;color:#facc15;margin-top:4px;letter-spacing:1px;}
+/* dive hint */
+#diveHint{position:absolute;top:52%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.78);color:#fff;padding:16px 26px;border-radius:14px;font-weight:800;letter-spacing:2px;text-align:center;z-index:10;pointer-events:none;border:1px solid rgba(255,200,80,0.4);}
+#diveHint .ht{font-size:18px;}
+#diveTimer{font-size:13px;color:#facc15;margin-top:4px;letter-spacing:1px;font-family:'Courier New',monospace;}
 
 /* kick flash */
-.kick-flash{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:56px;font-weight:900;letter-spacing:3px;pointer-events:none;z-index:20;animation:kf 1.3s ease-out forwards;text-shadow:0 4px 24px rgba(0,0,0,0.5);}
+.kick-flash{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);font-size:56px;font-weight:900;letter-spacing:3px;pointer-events:none;z-index:20;animation:kf 1.3s ease-out forwards;text-shadow:0 4px 24px rgba(0,0,0,0.6),0 0 20px rgba(0,0,0,0.5);}
 @keyframes kf{0%{opacity:0;transform:translate(-50%,-50%) scale(.5);}20%{opacity:1;transform:translate(-50%,-50%) scale(1.15);}60%{opacity:1;transform:translate(-50%,-50%) scale(1);}100%{opacity:0;transform:translate(-50%,-50%) scale(.95);}}
 
-/* POST HIT flash */
-.post-flash{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%);font-size:36px;font-weight:800;color:#facc15;pointer-events:none;z-index:20;animation:kf 1s ease-out forwards;}
-
-/* result overlay */
-.res-ov{position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:60;}
-.res-card{background:#fff;color:#0a1a0a;border-radius:18px;padding:30px 36px;text-align:center;min-width:320px;box-shadow:0 30px 60px rgba(0,0,0,0.5);}
+/* result */
+.res-ov{position:absolute;inset:0;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;z-index:60;}
+.res-card{background:#fff;color:#0a1424;border-radius:18px;padding:30px 36px;text-align:center;min-width:320px;box-shadow:0 30px 60px rgba(0,0,0,0.5);}
 .res-card h2{margin:0 0 6px;font-size:32px;}
 .res-card .delta{font-size:18px;margin:8px 0 18px;}
-.res-card button{padding:10px 20px;border-radius:10px;border:none;background:#0a1a0a;color:#fff;cursor:pointer;font-weight:700;font-size:14px;}
+.res-card button{padding:10px 20px;border-radius:10px;border:none;background:#0a1424;color:#fff;cursor:pointer;font-weight:700;font-size:14px;}
 
 /* leaderboard */
-.lb{position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.82);color:#fff;border-radius:14px;padding:14px 18px;min-width:280px;max-height:70vh;overflow:auto;z-index:65;backdrop-filter:blur(6px);animation:slin 280ms ease-out;}
+.lb{position:absolute;top:16px;right:16px;background:rgba(0,0,0,0.85);color:#fff;border-radius:14px;padding:14px 18px;min-width:280px;max-height:70vh;overflow:auto;z-index:65;backdrop-filter:blur(6px);animation:slin 280ms ease-out;border:1px solid rgba(255,200,80,0.3);}
 @keyframes slin{from{transform:translateX(110%);opacity:0;}to{transform:translateX(0);opacity:1;}}
 .lb h3{margin:0 0 8px;font-size:13px;letter-spacing:2px;text-transform:uppercase;color:#facc15;}
 .lb table{width:100%;border-collapse:collapse;font-size:13px;}
 .lb th,.lb td{padding:4px 6px;text-align:left;}
-.lb th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.45);border-bottom:1px solid rgba(255,255,255,.18);}
+.lb th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.45);border-bottom:1px solid rgba(255,255,255,0.18);}
 .lb td.n{text-align:right;font-variant-numeric:tabular-nums;}
 .lb tr.me td{color:#facc15;font-weight:700;}
 .lb .lbf{display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
-.lb .lbf button{background:#facc15;color:#0a1a0a;border:none;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;}
-.lb .src{font-size:10px;color:rgba(255,255,255,.4);}
+.lb .lbf button{background:#facc15;color:#0a1424;border:none;padding:6px 12px;border-radius:8px;font-weight:700;cursor:pointer;}
+.lb .src{font-size:10px;color:rgba(255,255,255,0.4);}
 
-/* setup screen */
+/* setup */
 .setup{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#1a3a1a,#061206);z-index:50;}
-.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px);border-radius:18px;padding:32px 36px;width:420px;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+.card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);border-radius:18px;padding:32px 36px;width:420px;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
 .card h1{margin:0 0 6px;font-size:27px;}
-.card .sub{color:rgba(255,255,255,.55);font-size:13px;margin-bottom:22px;}
-.card label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.55);margin-bottom:5px;}
-.card input,.card select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(0,0,0,.3);color:#fff;font-size:15px;margin-bottom:16px;outline:none;}
+.card .sub{color:rgba(255,255,255,0.55);font-size:13px;margin-bottom:22px;}
+.card label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.55);margin-bottom:5px;}
+.card input,.card select{width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.3);color:#fff;font-size:15px;margin-bottom:16px;outline:none;}
 .card input:focus,.card select:focus{border-color:#facc15;}
 .row{display:flex;gap:12px;}.row>*{flex:1;}
 .diffs{display:flex;gap:8px;margin-bottom:22px;}
-.diffs button{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.2);color:#fff;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:1px;transition:all 120ms;}
-.diffs button.on{background:#facc15;color:#0a1a0a;border-color:#facc15;}
-.go{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 16px rgba(34,197,94,.35);}
+.diffs button{flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.2);color:#fff;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:1px;transition:all 120ms;}
+.diffs button.on{background:#facc15;color:#0a1424;border-color:#facc15;}
+.go{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 16px rgba(34,197,94,0.35);}
 .go:hover{transform:translateY(-1px);}
 .hidden{display:none!important;}
 </style>
@@ -95,361 +97,348 @@ body.shake #stage{animation:shake 220ms ease-out;}
 <div id="app">
 <div id="stage">
 
-<!-- ═══════════════ STADIUM BACKGROUND ═══════════════ -->
-<svg id="stadiumBg" viewBox="0 0 1280 720" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+<!-- ═══════ SINGLE SCENE SVG ═══════ -->
+<svg id="scene" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
 <defs>
+  <!-- gradients -->
   <linearGradient id="skyG" x1="0" x2="0" y1="0" y2="1">
     <stop offset="0" stop-color="#0a1a3a"/>
     <stop offset="1" stop-color="#1e3a5a"/>
   </linearGradient>
   <linearGradient id="grassG" x1="0" x2="0" y1="0" y2="1">
-    <stop offset="0" stop-color="#1a5c1a"/>
+    <stop offset="0" stop-color="#1f6d1f"/>
     <stop offset="1" stop-color="#0d3d0d"/>
   </linearGradient>
-  <pattern id="grassStripes" x="0" y="0" width="80" height="1" patternUnits="userSpaceOnUse">
-    <rect x="0" y="0" width="40" height="1" fill="rgba(255,255,255,0.04)"/>
-  </pattern>
-  <!-- Crowd dot pattern -->
-  <pattern id="crowdPat" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-    <circle cx="8" cy="8" r="4" fill="#e86a3a" opacity="0.7"/>
-  </pattern>
-  <pattern id="crowdPat2" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-    <circle cx="8" cy="8" r="4" fill="#4a7adc" opacity="0.7"/>
-  </pattern>
-  <pattern id="crowdPat3" x="0" y="0" width="16" height="16" patternUnits="userSpaceOnUse">
-    <circle cx="8" cy="8" r="4" fill="#eacc40" opacity="0.7"/>
-  </pattern>
-</defs>
-
-<!-- Night sky -->
-<rect width="1280" height="720" fill="url(#skyG)"/>
-
-<!-- Stars -->
-<circle cx="120" cy="40" r="1.2" fill="white" opacity=".6"/>
-<circle cx="340" cy="20" r="1" fill="white" opacity=".5"/>
-<circle cx="580" cy="35" r="1.5" fill="white" opacity=".7"/>
-<circle cx="820" cy="18" r="1" fill="white" opacity=".5"/>
-<circle cx="1050" cy="42" r="1.3" fill="white" opacity=".6"/>
-<circle cx="1180" cy="25" r="1" fill="white" opacity=".4"/>
-<circle cx="200" cy="55" r="0.8" fill="white" opacity=".4"/>
-<circle cx="700" cy="12" r="1" fill="white" opacity=".5"/>
-<circle cx="950" cy="55" r="0.9" fill="white" opacity=".4"/>
-
-<!-- Upper stands - left block -->
-<rect x="0" y="55" width="280" height="240" fill="#1a2a35" rx="0"/>
-<rect x="0" y="55" width="280" height="240" fill="url(#crowdPat2)" opacity="0.5"/>
-<!-- seat rows -->
-<line x1="0" y1="90" x2="280" y2="90" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="105" x2="280" y2="105" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="120" x2="280" y2="120" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="135" x2="280" y2="135" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="150" x2="280" y2="150" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="165" x2="280" y2="165" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="180" x2="280" y2="180" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="195" x2="280" y2="195" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="210" x2="280" y2="210" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="225" x2="280" y2="225" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="240" x2="280" y2="240" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="255" x2="280" y2="255" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="0" y1="270" x2="280" y2="270" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-
-<!-- Upper stands - centre block -->
-<rect x="280" y="30" width="720" height="265" fill="#1e2832" rx="0"/>
-<rect x="280" y="30" width="720" height="100" fill="url(#crowdPat3)" opacity="0.5"/>
-<rect x="280" y="130" width="720" height="95" fill="url(#crowdPat)" opacity="0.55"/>
-<rect x="280" y="225" width="720" height="70" fill="url(#crowdPat2)" opacity="0.5"/>
-<line x1="280" y1="65" x2="1000" y2="65" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="80" x2="1000" y2="80" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="95" x2="1000" y2="95" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="110" x2="1000" y2="110" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="125" x2="1000" y2="125" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="140" x2="1000" y2="140" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="155" x2="1000" y2="155" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="170" x2="1000" y2="170" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="185" x2="1000" y2="185" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="200" x2="1000" y2="200" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="215" x2="1000" y2="215" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="230" x2="1000" y2="230" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="245" x2="1000" y2="245" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="260" x2="1000" y2="260" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="280" y1="275" x2="1000" y2="275" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-
-<!-- Upper stands - right block -->
-<rect x="1000" y="55" width="280" height="240" fill="#1a2a35" rx="0"/>
-<rect x="1000" y="55" width="280" height="240" fill="url(#crowdPat)" opacity="0.5"/>
-<line x1="1000" y1="90" x2="1280" y2="90" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="105" x2="1280" y2="105" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="120" x2="1280" y2="120" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="135" x2="1280" y2="135" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="150" x2="1280" y2="150" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="165" x2="1280" y2="165" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="180" x2="1280" y2="180" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="195" x2="1280" y2="195" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="210" x2="1280" y2="210" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="225" x2="1280" y2="225" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="240" x2="1280" y2="240" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="255" x2="1280" y2="255" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-<line x1="1000" y1="270" x2="1280" y2="270" stroke="rgba(0,0,0,0.3)" stroke-width="0.8"/>
-
-<!-- Advertising hoardings (behind goal) -->
-<rect x="0" y="292" width="1280" height="32" fill="#1a1a1a"/>
-<rect x="0" y="292" width="160" height="32" fill="#c8102e"/>
-<text x="80" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="white" font-family="sans-serif">SPONSOR</text>
-<rect x="165" y="292" width="200" height="32" fill="#00529b"/>
-<text x="265" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="white" font-family="sans-serif">ADIDAS</text>
-<rect x="370" y="292" width="240" height="32" fill="#f5a623"/>
-<text x="490" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="#111" font-family="sans-serif">BETWAY</text>
-<rect x="615" y="292" width="200" height="32" fill="#00529b"/>
-<text x="715" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="white" font-family="sans-serif">NIKE</text>
-<rect x="820" y="292" width="260" height="32" fill="#c8102e"/>
-<text x="950" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="white" font-family="sans-serif">PEPSI</text>
-<rect x="1085" y="292" width="195" height="32" fill="#f5a623"/>
-<text x="1182" y="313" text-anchor="middle" font-size="12" font-weight="bold" fill="#111" font-family="sans-serif">EA SPORTS</text>
-
-<!-- Floodlights -->
-<!-- Left floodlight -->
-<rect x="38" y="145" width="8" height="150" fill="#ccc" rx="2"/>
-<rect x="18" y="142" width="48" height="12" fill="#ddd" rx="2"/>
-<ellipse cx="42" cy="146" rx="24" ry="6" fill="#fffde0" opacity="0.6"/>
-<!-- Right floodlight -->
-<rect x="1234" y="145" width="8" height="150" fill="#ccc" rx="2"/>
-<rect x="1214" y="142" width="48" height="12" fill="#ddd" rx="2"/>
-<ellipse cx="1238" cy="146" rx="24" ry="6" fill="#fffde0" opacity="0.6"/>
-
-<!-- Grass surface -->
-<rect x="0" y="322" width="1280" height="398" fill="url(#grassG)"/>
-<!-- Grass stripes -->
-<rect x="0" y="322" width="1280" height="398" fill="url(#grassStripes)"/>
-
-<!-- Penalty box lines -->
-<rect x="340" y="322" width="600" height="398" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2"/>
-<!-- 6-yard box -->
-<rect x="480" y="322" width="320" height="130" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"/>
-<!-- Goal line at base of goal -->
-<line x1="340" y1="322" x2="940" y2="322" stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
-</svg>
-
-<!-- ═══════════════ GAME SVG ═══════════════ -->
-<div id="pitchWrap">
-<svg id="pitchSvg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet">
-<defs>
-  <pattern id="netBackP" x="0" y="0" width="13" height="13" patternUnits="userSpaceOnUse">
-    <path d="M0,0 L13,13 M13,0 L0,13" stroke="rgba(255,255,255,0.55)" stroke-width="0.9" fill="none"/>
-  </pattern>
-  <pattern id="netSideP" x="0" y="0" width="13" height="13" patternUnits="userSpaceOnUse">
-    <path d="M0,0 L13,13 M13,0 L0,13" stroke="rgba(255,255,255,0.28)" stroke-width="0.8" fill="none"/>
-  </pattern>
-  <pattern id="netTopP" x="0" y="0" width="13" height="13" patternUnits="userSpaceOnUse">
-    <path d="M0,0 L13,13 M13,0 L0,13" stroke="rgba(255,255,255,0.22)" stroke-width="0.8" fill="none"/>
-  </pattern>
-  <linearGradient id="postG" x1="0" x2="1" y1="0" y2="0">
-    <stop offset="0" stop-color="#f0f0f0"/>
-    <stop offset="0.5" stop-color="#ffffff"/>
+  <linearGradient id="postLR" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0" stop-color="#d8d8d8"/>
+    <stop offset="0.3" stop-color="#ffffff"/>
+    <stop offset="0.5" stop-color="#fafafa"/>
     <stop offset="1" stop-color="#b8b8b8"/>
   </linearGradient>
-  <linearGradient id="postGH" x1="0" x2="0" y1="0" y2="1">
+  <linearGradient id="postTB" x1="0" x2="0" y1="0" y2="1">
     <stop offset="0" stop-color="#ffffff"/>
-    <stop offset="1" stop-color="#cccccc"/>
+    <stop offset="0.5" stop-color="#f5f5f5"/>
+    <stop offset="1" stop-color="#bbbbbb"/>
   </linearGradient>
   <radialGradient id="ballG" cx="35%" cy="30%">
     <stop offset="0" stop-color="#ffffff"/>
-    <stop offset="1" stop-color="#d0d0d0"/>
+    <stop offset="1" stop-color="#c8c8c8"/>
   </radialGradient>
-  <filter id="postShadow" x="-20%" y="-20%" width="150%" height="150%">
-    <feDropShadow dx="2" dy="2" stdDeviation="2" flood-opacity="0.35"/>
-  </filter>
-  <!-- Grass stripes on pitch area -->
-  <pattern id="grassSt" x="0" y="0" width="60" height="1" patternUnits="userSpaceOnUse">
-    <rect x="0" y="0" width="30" height="1" fill="rgba(255,255,255,0.035)"/>
+  <radialGradient id="floodG" cx="50%" cy="50%">
+    <stop offset="0" stop-color="#fffde0" stop-opacity="0.5"/>
+    <stop offset="1" stop-color="#fffde0" stop-opacity="0"/>
+  </radialGradient>
+
+  <!-- net patterns -->
+  <pattern id="netBack" x="0" y="0" width="11" height="11" patternUnits="userSpaceOnUse">
+    <path d="M0,0 L11,11 M11,0 L0,11" stroke="rgba(255,255,255,0.65)" stroke-width="0.7" fill="none"/>
   </pattern>
+  <pattern id="netSide" x="0" y="0" width="11" height="11" patternUnits="userSpaceOnUse" patternTransform="skewY(15)">
+    <path d="M0,0 L11,11 M11,0 L0,11" stroke="rgba(255,255,255,0.32)" stroke-width="0.65" fill="none"/>
+  </pattern>
+  <pattern id="netTop" x="0" y="0" width="11" height="11" patternUnits="userSpaceOnUse">
+    <path d="M0,0 L11,11 M11,0 L0,11" stroke="rgba(255,255,255,0.28)" stroke-width="0.65" fill="none"/>
+  </pattern>
+
+  <!-- pitch grass stripes -->
+  <pattern id="grassSt" x="0" y="0" width="60" height="1" patternUnits="userSpaceOnUse">
+    <rect x="0" y="0" width="30" height="1" fill="rgba(255,255,255,0.045)"/>
+  </pattern>
+
+  <!-- ─── CROWD PATTERNS — mini heads ─── -->
+  <pattern id="crowdR" patternUnits="userSpaceOnUse" width="14" height="17">
+    <circle cx="7" cy="4.5" r="2.8" fill="#d4a574"/>
+    <ellipse cx="7" cy="3.5" rx="2.8" ry="1.3" fill="#2a1a0a"/>
+    <path d="M3,9 Q7,7.5 11,9 L11,17 L3,17 Z" fill="#c8102e"/>
+  </pattern>
+  <pattern id="crowdB" patternUnits="userSpaceOnUse" width="14" height="17">
+    <circle cx="7" cy="4.5" r="2.8" fill="#e0b89a"/>
+    <ellipse cx="7" cy="3.5" rx="2.8" ry="1.3" fill="#3a2515"/>
+    <path d="M3,9 Q7,7.5 11,9 L11,17 L3,17 Z" fill="#003478"/>
+  </pattern>
+  <pattern id="crowdY" patternUnits="userSpaceOnUse" width="14" height="17">
+    <circle cx="7" cy="4.5" r="2.8" fill="#c89060"/>
+    <ellipse cx="7" cy="3.5" rx="2.8" ry="1.3" fill="#1a0e04"/>
+    <path d="M3,9 Q7,7.5 11,9 L11,17 L3,17 Z" fill="#FFD700"/>
+  </pattern>
+  <pattern id="crowdW" patternUnits="userSpaceOnUse" width="14" height="17">
+    <circle cx="7" cy="4.5" r="2.8" fill="#d8b294"/>
+    <ellipse cx="7" cy="3.5" rx="2.8" ry="1.3" fill="#5a3a20"/>
+    <path d="M3,9 Q7,7.5 11,9 L11,17 L3,17 Z" fill="#f0f0f0"/>
+  </pattern>
+  <pattern id="crowdG" patternUnits="userSpaceOnUse" width="14" height="17">
+    <circle cx="7" cy="4.5" r="2.8" fill="#c89976"/>
+    <ellipse cx="7" cy="3.5" rx="2.8" ry="1.3" fill="#2a1810"/>
+    <path d="M3,9 Q7,7.5 11,9 L11,17 L3,17 Z" fill="#009b3a"/>
+  </pattern>
+
+  <filter id="postShadow" x="-20%" y="-20%" width="150%" height="150%">
+    <feDropShadow dx="2" dy="2" stdDeviation="1.8" flood-opacity="0.4"/>
+  </filter>
 </defs>
 
-<!-- ── PITCH GROUND ── -->
-<rect x="0" y="280" width="800" height="220" fill="#1a5c1a"/>
-<rect x="0" y="280" width="800" height="220" fill="url(#grassSt)"/>
+<!-- ── SKY ── -->
+<rect x="-100" y="-50" width="1000" height="270" fill="url(#skyG)"/>
 
-<!-- Penalty area outline -->
-<rect x="130" y="280" width="540" height="180" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
-<!-- 6-yard box -->
-<rect x="250" y="280" width="300" height="75" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
-<!-- Penalty arc -->
-<path d="M308,460 A100,100 0 0,1 492,460" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+<!-- ── STARS ── -->
+<circle cx="80" cy="20" r="0.8" fill="white" opacity="0.6"/>
+<circle cx="220" cy="15" r="1" fill="white" opacity="0.7"/>
+<circle cx="360" cy="28" r="0.7" fill="white" opacity="0.5"/>
+<circle cx="510" cy="12" r="1.1" fill="white" opacity="0.7"/>
+<circle cx="640" cy="22" r="0.8" fill="white" opacity="0.6"/>
+<circle cx="730" cy="30" r="0.9" fill="white" opacity="0.5"/>
 
-<!-- ── 3D GOAL - draw back-to-front ── -->
-<!-- Coordinates:
-     Front: x=140..660, y=88..370   (w=520, h=282)
-     Back:  x=163..637, y=72..348   (slightly inward+up for depth) -->
+<!-- ── FLOODLIGHTS ── -->
+<rect x="-2" y="60" width="3" height="135" fill="#aaa"/>
+<rect x="-12" y="58" width="22" height="6" fill="#ccc" rx="1"/>
+<ellipse cx="-1" cy="61" rx="14" ry="4" fill="url(#floodG)"/>
+<rect x="797" y="60" width="3" height="135" fill="#aaa"/>
+<rect x="790" y="58" width="22" height="6" fill="#ccc" rx="1"/>
+<ellipse cx="801" cy="61" rx="14" ry="4" fill="url(#floodG)"/>
 
-<!-- Back shadow/ground inside goal -->
-<polygon points="163,348 637,348 660,370 140,370" fill="rgba(0,0,0,0.18)"/>
+<!-- ── STADIUM ROOF / OVERHANG ── -->
+<polygon points="-100,40 -100,75 900,75 900,40" fill="#2a3340"/>
+<rect x="-100" y="72" width="1000" height="3" fill="#1a2128"/>
 
-<!-- Back net face -->
-<polygon points="163,72 637,72 637,348 163,348" fill="rgba(20,60,20,0.6)"/>
-<polygon points="163,72 637,72 637,348 163,348" fill="url(#netBackP)"/>
+<!-- ── UPPER STANDS — sectioned, with mini-head crowd ── -->
+<!-- Section A (left) -->
+<rect x="-100" y="75" width="280" height="170" fill="#1c252e"/>
+<rect x="-100" y="75" width="280" height="170" fill="url(#crowdR)" opacity="0.85"/>
+<!-- Section B (centre-left) -->
+<rect x="180" y="75" width="220" height="170" fill="#1e2832"/>
+<rect x="180" y="75" width="220" height="170" fill="url(#crowdY)" opacity="0.85"/>
+<!-- Section C (centre-right) -->
+<rect x="400" y="75" width="220" height="170" fill="#1e2832"/>
+<rect x="400" y="75" width="220" height="170" fill="url(#crowdW)" opacity="0.85"/>
+<!-- Section D (right) -->
+<rect x="620" y="75" width="280" height="170" fill="#1c252e"/>
+<rect x="620" y="75" width="280" height="170" fill="url(#crowdB)" opacity="0.85"/>
 
-<!-- Top net panel -->
-<polygon points="140,88 660,88 637,72 163,72" fill="rgba(20,40,20,0.5)"/>
-<polygon points="140,88 660,88 637,72 163,72" fill="url(#netTopP)"/>
+<!-- Mid-section breaks (concrete dividers between stand blocks) -->
+<rect x="178" y="75" width="4" height="170" fill="#0a0e14"/>
+<rect x="398" y="75" width="4" height="170" fill="#0a0e14"/>
+<rect x="618" y="75" width="4" height="170" fill="#0a0e14"/>
+
+<!-- Horizontal divider lines for stand tiers -->
+<line x1="-100" y1="135" x2="900" y2="135" stroke="rgba(0,0,0,0.45)" stroke-width="1.2"/>
+<line x1="-100" y1="190" x2="900" y2="190" stroke="rgba(0,0,0,0.45)" stroke-width="1.2"/>
+
+<!-- Stadium dimming overlay so foreground pops -->
+<rect x="-100" y="75" width="1000" height="170" fill="rgba(0,0,0,0.18)"/>
+
+<!-- ── STADIUM SCOREBOARD (jumbotron, high in stands) ── -->
+<g>
+  <rect x="320" y="92" width="160" height="38" fill="#0a0a0a" stroke="#444" stroke-width="2" rx="3"/>
+  <rect x="324" y="96" width="152" height="30" fill="#1a1a1a" rx="2"/>
+  <!-- LED dots flicker -->
+  <text x="400" y="114" text-anchor="middle" font-family="Courier New,monospace" font-size="10" font-weight="bold" fill="#ffc857" letter-spacing="1.5">QATAR STADIUM</text>
+  <text x="400" y="124" text-anchor="middle" font-family="Courier New,monospace" font-size="7" fill="#22c55e">▪ LIVE ▪ FINAL ▪</text>
+  <!-- mounting brackets -->
+  <line x1="335" y1="75" x2="345" y2="92" stroke="#444" stroke-width="1.5"/>
+  <line x1="455" y1="75" x2="465" y2="92" stroke="#444" stroke-width="1.5"/>
+</g>
+
+<!-- ── ADVERTISING BOARDS — WORLD CUP THEMED ── -->
+<g>
+  <!-- Boards span full width, behind goal -->
+  <rect x="-100" y="244" width="1000" height="24" fill="#0a0a0a"/>
+  <!-- Board segments -->
+  <rect x="-100" y="246" width="160" height="20" fill="#009b3a"/>
+  <text x="-20" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFD700" font-family="Arial Black,sans-serif">BRASIL</text>
+
+  <rect x="62" y="246" width="180" height="20" fill="#75aadb"/>
+  <text x="152" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff" font-family="Arial Black,sans-serif">ARGENTINA</text>
+
+  <rect x="244" y="246" width="170" height="20" fill="#5a1538"/>
+  <text x="329" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFD700" font-family="Arial Black,sans-serif">FIFA WORLD CUP</text>
+
+  <rect x="416" y="246" width="120" height="20" fill="#002395"/>
+  <text x="476" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#fff" font-family="Arial Black,sans-serif">FRANCE</text>
+
+  <rect x="538" y="246" width="150" height="20" fill="#c8102e"/>
+  <text x="613" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#FFD700" font-family="Arial Black,sans-serif">ESPAÑA</text>
+
+  <rect x="690" y="246" width="140" height="20" fill="#FFD700"/>
+  <text x="760" y="261" text-anchor="middle" font-size="10" font-weight="bold" fill="#5a1538" font-family="Arial Black,sans-serif">QATAR 2022</text>
+
+  <rect x="832" y="246" width="100" height="20" fill="#002395"/>
+  <text x="882" y="261" text-anchor="middle" font-size="9" font-weight="bold" fill="#fff" font-family="Arial Black,sans-serif">FIFA.COM</text>
+</g>
+
+<!-- ── GRASS PITCH ── -->
+<rect x="-100" y="268" width="1000" height="200" fill="url(#grassG)"/>
+<rect x="-100" y="268" width="1000" height="200" fill="url(#grassSt)"/>
+
+<!-- ── PITCH MARKINGS — proper penalty box in perspective ── -->
+<!-- 18-yard box: trapezoid with goal-line edge at top, wider bottom edge -->
+<path d="M 30,450 L 90,348 L 710,348 L 770,450"
+      fill="none" stroke="rgba(255,255,255,0.7)" stroke-width="2" stroke-linejoin="round"/>
+<!-- 6-yard box: smaller trapezoid -->
+<path d="M 215,395 L 240,348 L 560,348 L 585,395"
+      fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.6" stroke-linejoin="round"/>
+<!-- Penalty arc D-shape (foreground) -->
+<path d="M 348,440 Q 400,475 452,440" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.6"/>
+
+<!-- ── 3D GOAL ── back-to-front order
+     Front face: x=140 to x=660, y=85 to y=348 (width 520, height 263)
+     Back face:  x=170 to x=630, y=68 to y=325 (inset 30, raised 17)              -->
+
+<!-- Back net face (solid colour so stands don't show through) -->
+<rect x="170" y="68" width="460" height="257" fill="#0d2a14"/>
+<rect x="170" y="68" width="460" height="257" fill="url(#netBack)"/>
+<!-- Subtle net droop shading at bottom -->
+<path d="M 170,260 Q 400,295 630,260 L 630,325 L 170,325 Z" fill="rgba(0,0,0,0.18)"/>
+
+<!-- Top net panel (the roof of the goal in perspective) -->
+<polygon points="140,85 660,85 630,68 170,68" fill="#0a2010"/>
+<polygon points="140,85 660,85 630,68 170,68" fill="url(#netTop)"/>
 
 <!-- Left net side panel -->
-<polygon points="140,88 140,370 163,348 163,72" fill="rgba(20,40,20,0.45)"/>
-<polygon points="140,88 140,370 163,348 163,72" fill="url(#netSideP)"/>
+<polygon points="140,85 140,348 170,325 170,68" fill="#0d2814"/>
+<polygon points="140,85 140,348 170,325 170,68" fill="url(#netSide)"/>
 
 <!-- Right net side panel -->
-<polygon points="660,88 660,370 637,348 637,72" fill="rgba(20,40,20,0.45)"/>
-<polygon points="660,88 660,370 637,348 637,72" fill="url(#netSideP)"/>
+<polygon points="660,85 660,348 630,325 630,68" fill="#0d2814"/>
+<polygon points="660,85 660,348 630,325 630,68" fill="url(#netSide)"/>
 
-<!-- Bottom net panel (floor of goal) -->
-<polygon points="140,370 660,370 637,348 163,348" fill="rgba(255,255,255,0.06)"/>
+<!-- Goal floor (shadow inside) -->
+<polygon points="140,348 660,348 630,325 170,325" fill="rgba(0,0,0,0.35)"/>
 
-<!-- Back posts & crossbar (inside goal depth) -->
-<rect x="161" y="70" width="7" height="280" fill="#d8d8d8" rx="2" opacity="0.8"/>
-<rect x="632" y="70" width="7" height="280" fill="#d8d8d8" rx="2" opacity="0.8"/>
-<rect x="161" y="70" width="478" height="7" fill="#d8d8d8" rx="2" opacity="0.8"/>
+<!-- Back posts (visible inside goal depth) -->
+<rect x="167" y="65" width="6" height="263" fill="#cfcfcf" opacity="0.65"/>
+<rect x="627" y="65" width="6" height="263" fill="#cfcfcf" opacity="0.65"/>
+<rect x="167" y="65" width="466" height="6" fill="#cfcfcf" opacity="0.65"/>
 
-<!-- Front posts & crossbar (foreground, with shadow) -->
-<rect x="134" y="84" width="13" height="290" fill="url(#postG)" rx="3" filter="url(#postShadow)"/>
-<rect x="653" y="84" width="13" height="290" fill="url(#postG)" rx="3" filter="url(#postShadow)"/>
-<rect x="134" y="84" width="532" height="13" fill="url(#postGH)" rx="3" filter="url(#postShadow)"/>
+<!-- ── FRONT GOAL FRAME — solid white, properly connected at corners ── -->
+<!-- Crossbar across the top, full width (overlaps post corners) -->
+<rect x="130" y="78" width="540" height="15" fill="url(#postTB)" filter="url(#postShadow)"/>
+<!-- Posts — drawn AFTER crossbar so they overlap visually at corners -->
+<rect x="130" y="78" width="15" height="277" fill="url(#postLR)" filter="url(#postShadow)"/>
+<rect x="655" y="78" width="15" height="277" fill="url(#postLR)" filter="url(#postShadow)"/>
+<!-- Corner caps to make joints look like a real welded frame -->
+<rect x="130" y="78" width="15" height="15" fill="url(#postTB)"/>
+<rect x="655" y="78" width="15" height="15" fill="url(#postTB)"/>
+<!-- Highlight strips for 3D look -->
+<rect x="133" y="80" width="3" height="273" fill="rgba(255,255,255,0.85)" rx="1"/>
+<rect x="658" y="80" width="3" height="273" fill="rgba(255,255,255,0.85)" rx="1"/>
+<rect x="133" y="80" width="534" height="3" fill="rgba(255,255,255,0.85)" rx="1"/>
+<!-- Shadow strips on inner side of posts -->
+<rect x="142" y="93" width="2" height="262" fill="rgba(0,0,0,0.2)"/>
+<rect x="657" y="93" width="2" height="262" fill="rgba(0,0,0,0.2)"/>
 
-<!-- Post highlight lines -->
-<rect x="138" y="84" width="3" height="290" fill="rgba(255,255,255,0.6)" rx="1"/>
-<rect x="657" y="84" width="3" height="290" fill="rgba(255,255,255,0.6)" rx="1"/>
+<!-- Goal line — clearly drawn between the two front posts -->
+<line x1="145" y1="349" x2="655" y2="349" stroke="#ffffff" stroke-width="3" stroke-linecap="square"/>
 
-<!-- ── PITCH MARKINGS (foreground) ── -->
-<!-- Goal line  -->
-<line x1="140" y1="370" x2="660" y2="370" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+<!-- ── KEEPER ── wrapper has BASE position via SVG transform.
+     Inner #keeper gets CSS transform DELTAS only. -->
+<g id="keeperWrap" transform="translate(400 252)">
+  <g id="keeper">
+    <!-- Shadow on ground -->
+    <ellipse cx="0" cy="98" rx="30" ry="5" fill="rgba(0,0,0,0.35)"/>
 
-<!-- Penalty spot -->
-<circle cx="400" cy="460" r="4" fill="rgba(255,255,255,0.9)"/>
+    <!-- Legs / Boots / Socks -->
+    <rect x="-19" y="68" width="14" height="20" rx="3" fill="#1a1a1a"/>
+    <rect x="5"   y="68" width="14" height="20" rx="3" fill="#1a1a1a"/>
+    <rect x="-17" y="70" width="4" height="3" rx="1" fill="rgba(255,255,255,0.35)"/>
+    <rect x="7"   y="70" width="4" height="3" rx="1" fill="rgba(255,255,255,0.35)"/>
+    <rect x="-17" y="44" width="12" height="26" rx="2" fill="#e8e8e8"/>
+    <rect x="5"   y="44" width="12" height="26" rx="2" fill="#e8e8e8"/>
+    <rect x="-17" y="54" width="12" height="3" fill="#c8102e"/>
+    <rect x="5"   y="54" width="12" height="3" fill="#c8102e"/>
 
-<!-- ── KEEPER GROUP ── -->
-<!-- Drawn relative to keeper anchor = waist centre. Group translated via JS. -->
-<g id="keeper" transform="translate(400,255)" style="transform-box:fill-box;transition:transform 300ms cubic-bezier(.2,.8,.3,1);">
-  <!-- Shadow -->
-  <ellipse cx="0" cy="108" rx="28" ry="5" fill="rgba(0,0,0,0.3)"/>
+    <!-- Shorts -->
+    <path d="M-21,22 L21,22 L17,48 L0,50 L-17,48 Z" fill="#003478"/>
+    <line x1="0" y1="22" x2="0" y2="48" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
 
-  <!-- Boots -->
-  <rect x="-20" y="78" width="15" height="20" rx="4" fill="#1a1a1a"/>
-  <rect x="5"  y="78" width="15" height="20" rx="4" fill="#1a1a1a"/>
-  <!-- Boot highlight -->
-  <rect x="-18" y="80" width="5" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
-  <rect x="7"   y="80" width="5" height="4" rx="1" fill="rgba(255,255,255,0.3)"/>
+    <!-- Jersey body -->
+    <path d="M-25,-14 Q-26,-16 -22,-18 L22,-18 Q26,-16 25,-14 L26,25 Q14,30 0,30 Q-14,30 -26,25 Z" fill="#f5a623"/>
+    <path d="M-9,-18 L9,-18 L9,30 L-9,30 Z" fill="rgba(0,0,0,0.12)"/>
+    <!-- Collar -->
+    <path d="M-7,-18 Q0,-23 7,-18 L5,-14 Q0,-16 -5,-14 Z" fill="#1a1a1a"/>
+    <!-- Number -->
+    <text x="0" y="12" text-anchor="middle" font-size="15" font-weight="900" fill="rgba(0,0,0,0.5)" font-family="Arial Black,sans-serif">1</text>
 
-  <!-- Socks -->
-  <rect x="-18" y="52" width="13" height="30" rx="3" fill="#e8e8e8"/>
-  <rect x="5"   y="52" width="13" height="30" rx="3" fill="#e8e8e8"/>
-  <!-- Sock stripe -->
-  <rect x="-18" y="63" width="13" height="4" rx="0" fill="#c8102e"/>
-  <rect x="5"   y="63" width="13" height="4" rx="0" fill="#c8102e"/>
+    <!-- Arms — extended outward for keeper stance -->
+    <g transform="rotate(-22 -25 -8)">
+      <rect x="-56" y="-13" width="32" height="11" rx="5.5" fill="#f5a623"/>
+      <ellipse cx="-60" cy="-7.5" rx="11" ry="9" fill="#1a7a3a"/>
+      <line x1="-68" y1="-7" x2="-52" y2="-7" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
+      <line x1="-60" y1="-15" x2="-60" y2="0" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
+    </g>
+    <g transform="rotate(22 25 -8)">
+      <rect x="24" y="-13" width="32" height="11" rx="5.5" fill="#f5a623"/>
+      <ellipse cx="60" cy="-7.5" rx="11" ry="9" fill="#1a7a3a"/>
+      <line x1="52" y1="-7" x2="68" y2="-7" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
+      <line x1="60" y1="-15" x2="60" y2="0" stroke="rgba(255,255,255,0.4)" stroke-width="1.2"/>
+    </g>
 
-  <!-- Shorts -->
-  <path d="M-21,28 L21,28 L17,56 L0,58 L-17,56 Z" fill="#00529b"/>
-  <line x1="0" y1="28" x2="0" y2="56" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+    <!-- Neck -->
+    <rect x="-6" y="-28" width="12" height="14" rx="3" fill="#c8956a"/>
 
-  <!-- Jersey body -->
-  <rect x="-26" y="-18" width="52" height="50" rx="7" fill="#f5a623"/>
-  <!-- Jersey centre stripe -->
-  <rect x="-9" y="-18" width="18" height="50" rx="0" fill="rgba(0,0,0,0.12)"/>
-  <!-- Jersey collar -->
-  <path d="M-8,-18 Q0,-26 8,-18" fill="#e8943c" stroke="none"/>
-  <!-- Jersey number -->
-  <text x="0" y="17" text-anchor="middle" font-size="16" font-weight="900" fill="rgba(0,0,0,0.45)" font-family="sans-serif">1</text>
-
-  <!-- Left arm extended -->
-  <g transform="rotate(-22, -26, -10)">
-    <rect x="-58" y="-14" width="34" height="12" rx="6" fill="#f5a623"/>
-    <!-- Glove - left -->
-    <ellipse cx="-62" cy="-8" rx="12" ry="9" fill="#1a7a3a"/>
-    <line x1="-70" y1="-8" x2="-54" y2="-8" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-    <line x1="-62" y1="-16" x2="-62" y2="0" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
+    <!-- Head -->
+    <circle cx="0" cy="-46" r="19" fill="#c8956a"/>
+    <!-- Ears -->
+    <ellipse cx="-18" cy="-46" rx="4" ry="6" fill="#b8855a"/>
+    <ellipse cx="18" cy="-46" rx="4" ry="6" fill="#b8855a"/>
+    <!-- Hair -->
+    <path d="M-19,-57 Q0,-72 19,-57 L19,-48 Q12,-53 0,-55 Q-12,-53 -19,-48 Z" fill="#2a1a0a"/>
+    <path d="M-18,-58 Q-8,-64 0,-62 Q8,-60 18,-58" fill="none" stroke="#1a0e04" stroke-width="1.2"/>
+    <!-- Eyes -->
+    <ellipse cx="-7" cy="-48" rx="4" ry="3.5" fill="white"/>
+    <ellipse cx="7"  cy="-48" rx="4" ry="3.5" fill="white"/>
+    <circle cx="-6" cy="-48" r="2.2" fill="#2a1a0a"/>
+    <circle cx="8"  cy="-48" r="2.2" fill="#2a1a0a"/>
+    <circle cx="-5" cy="-49.5" r="0.9" fill="white"/>
+    <circle cx="9"  cy="-49.5" r="0.9" fill="white"/>
+    <!-- Eyebrows — focused -->
+    <path d="M-12,-54 L-3,-52" stroke="#2a1a0a" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M3,-52 L12,-54" stroke="#2a1a0a" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Nose -->
+    <path d="M-2,-42 Q0,-39 2,-42" stroke="#a07050" stroke-width="1.1" fill="none"/>
+    <!-- Mouth -->
+    <path d="M-5,-36 Q0,-33 5,-36" stroke="#8a5a3a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
   </g>
-
-  <!-- Right arm extended -->
-  <g transform="rotate(22, 26, -10)">
-    <rect x="24" y="-14" width="34" height="12" rx="6" fill="#f5a623"/>
-    <!-- Glove - right -->
-    <ellipse cx="62" cy="-8" rx="12" ry="9" fill="#1a7a3a"/>
-    <line x1="54" y1="-8" x2="70" y2="-8" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-    <line x1="62" y1="-16" x2="62" y2="0" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>
-  </g>
-
-  <!-- Neck -->
-  <rect x="-7" y="-30" width="14" height="16" rx="4" fill="#c8956a"/>
-
-  <!-- Head -->
-  <circle cx="0" cy="-48" r="20" fill="#c8956a"/>
-  <!-- Ear left -->
-  <ellipse cx="-19" cy="-48" rx="5" ry="7" fill="#b8855a"/>
-  <!-- Ear right -->
-  <ellipse cx="19" cy="-48" rx="5" ry="7" fill="#b8855a"/>
-
-  <!-- Hair -->
-  <path d="M-20,-60 Q0,-76 20,-60 L20,-50 Q12,-55 0,-57 Q-12,-55 -20,-50 Z" fill="#2a1a0a"/>
-  <!-- Hair detail -->
-  <path d="M-20,-60 Q-8,-66 0,-64 Q8,-62 20,-60" fill="none" stroke="#1a0e04" stroke-width="1.5"/>
-
-  <!-- Eyes -->
-  <ellipse cx="-8" cy="-50" rx="4.5" ry="4" fill="white"/>
-  <ellipse cx="8"  cy="-50" rx="4.5" ry="4" fill="white"/>
-  <circle cx="-7" cy="-50" r="2.5" fill="#2a1a0a"/>
-  <circle cx="9"  cy="-50" r="2.5" fill="#2a1a0a"/>
-  <!-- Eye shine -->
-  <circle cx="-6" cy="-51.5" r="1" fill="white"/>
-  <circle cx="10" cy="-51.5" r="1" fill="white"/>
-
-  <!-- Eyebrows - determined expression -->
-  <path d="M-13,-56 L-3,-54" stroke="#2a1a0a" stroke-width="2" stroke-linecap="round"/>
-  <path d="M3,-54 L13,-56" stroke="#2a1a0a" stroke-width="2" stroke-linecap="round"/>
-
-  <!-- Nose -->
-  <path d="M-2,-44 Q0,-41 2,-44" stroke="#a07050" stroke-width="1.2" fill="none"/>
-
-  <!-- Mouth - focused/determined -->
-  <path d="M-6,-38 Q0,-35 6,-38" stroke="#8a5a3a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
 </g>
 
-<!-- ── BALL ── -->
-<g id="ball" transform="translate(0,0)" style="transform-origin:400px 460px;">
-  <!-- Shadow -->
-  <ellipse id="ballShadow" cx="400" cy="472" rx="18" ry="5" fill="rgba(0,0,0,0.35)"/>
-  <!-- Ball -->
-  <circle cx="400" cy="460" r="17" fill="url(#ballG)" stroke="#222" stroke-width="1.5"/>
-  <!-- Pentagons -->
-  <polygon points="400,449 409,455 406,465 394,465 391,455" fill="#222"/>
-  <polygon points="391,449 383,454 386,449" fill="#222" opacity="0.5"/>
-  <polygon points="409,449 417,454 414,449" fill="#222" opacity="0.5"/>
-  <!-- Highlight -->
-  <ellipse cx="393" cy="452" rx="5" ry="3.5" fill="rgba(255,255,255,0.55)" transform="rotate(-20,393,452)"/>
+<!-- ── BALL on penalty spot ── -->
+<!-- Penalty spot drawn UNDER the ball -->
+<circle cx="400" cy="412" r="4.5" fill="rgba(255,255,255,0.95)"/>
+
+<g id="ball" style="transform-origin:400px 412px;">
+  <ellipse id="ballShadow" cx="400" cy="424" rx="18" ry="5" fill="rgba(0,0,0,0.4)"/>
+  <circle cx="400" cy="412" r="17" fill="url(#ballG)" stroke="#222" stroke-width="1.5"/>
+  <polygon points="400,401 410,408 406,419 394,419 390,408" fill="#222"/>
+  <polygon points="390,402 384,407 387,401" fill="#222" opacity="0.5"/>
+  <polygon points="410,402 416,407 413,401" fill="#222" opacity="0.5"/>
+  <ellipse cx="392" cy="404" rx="5" ry="3" fill="rgba(255,255,255,0.55)" transform="rotate(-20 392 404)"/>
 </g>
 </svg>
-</div><!-- pitchWrap -->
 
-<!-- ── HUD ── -->
-<div class="hud hidden" id="hud">
-  <div class="team-pill" id="tA"><span class="flag">🇧🇷</span><span class="tname">YOU</span></div>
+<!-- ── SCOREBOARD HUD ── -->
+<div class="scoreboard hidden" id="hud">
+  <div class="tm" id="tA"><span class="flag">🇧🇷</span><span class="tname">YOU</span></div>
   <div class="dots" id="dotsA"></div>
   <div class="vs">VS</div>
   <div class="dots" id="dotsB"></div>
-  <div class="team-pill" id="tB"><span class="flag">🇺🇾</span><span class="tname">CPU</span></div>
+  <div class="tm" id="tB"><span class="flag">🇺🇾</span><span class="tname">CPU</span></div>
 </div>
 <div id="banner" class="hidden">YOUR SHOT</div>
 
-<!-- ── POWER METER ── -->
+<!-- Power meter -->
 <div id="powerWrap" class="hidden">
   <div class="lbl">Power</div>
   <div class="bar-v"><div class="mk" id="powMk" style="bottom:0"></div></div>
 </div>
 
-<!-- ── DIVE HINT ── -->
+<!-- Dive hint -->
 <div id="diveHint" class="hidden">
-  <div>MOVE KEEPER TO SAVE</div>
+  <div class="ht">DRAG KEEPER TO SAVE</div>
   <div id="diveTimer">—</div>
 </div>
 
 </div><!-- stage -->
 
-<!-- ── SETUP ── -->
+<!-- Setup -->
 <div class="setup" id="setupScreen">
   <div class="card">
     <h1>⚽ Penalty Shoot-out</h1>
@@ -489,13 +478,11 @@ const DCFG={
   hard:  {powSpeed:2.2,  keeperSkill:0.78, cpuErr:0.12, diveMs:380,  winPts:3,  lossPts:-1},
 };
 
-// Goal in SVG space (front face)
-const GF={x:140,y:88,w:520,h:282}; // front
-const GB={x:163,y:72};              // back top-left offset
+// SVG coords (viewBox 800x450)
+const GF={x:140,y:85,w:520,h:263}; // goal front rect
 const BALL_R=17;
-const POST_W=13;
-const SPOT={x:400,y:460};
-const KBASE={x:400,y:255}; // keeper anchor (transform origin)
+const SPOT={x:400,y:412};
+const KBASE={x:400,y:252};
 
 // ─── STATE ──────────────────────────────────────────────────────
 let S;
@@ -508,11 +495,33 @@ function mkState(){
     oppFlag:'🇺🇾',oppCountry:'Uruguay',
     diff:'medium',dc:DCFG.medium,
     kicks:[],idx:0,scoreA:0,scoreB:0,
-    phase:'setup', // shoot_aim|shoot_pow|animating|keep_dive|animating_keep|over
+    phase:'setup',
     target:null, pow:null,
     cpuPlan:null, keeperPos:{x:KBASE.x,y:KBASE.y},
     golden:false,
   };
+}
+
+// ─── KEEPER POSITIONING ─────────────────────────────────────────
+function setKeeperDelta(kx,ky,instant){
+  const k=document.getElementById('keeper');
+  if(instant){
+    k.style.transition='none';
+    // force reflow so transition:none is applied before next transform
+    void k.getBoundingClientRect();
+  } else {
+    k.style.transition='';
+  }
+  const dx=kx-KBASE.x;
+  const dy=Math.min(KBASE.y+25,ky)-KBASE.y;
+  const rot=Math.max(-55,Math.min(55,dx/4.2));
+  k.style.transform=`translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+}
+
+function resetKeeper(){
+  const k=document.getElementById('keeper');
+  k.style.transition='';
+  k.style.transform='';
 }
 
 // ─── SETUP ──────────────────────────────────────────────────────
@@ -528,9 +537,11 @@ function fillSelects(){
   if(sv.ci!=null) a.value=sv.ci;
   if(sv.d) document.querySelectorAll('.diffs button').forEach(b=>b.classList.toggle('on',b.dataset.d===sv.d));
 }
+
 document.querySelectorAll('.diffs button').forEach(b=>{
   b.addEventListener('click',()=>{document.querySelectorAll('.diffs button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
 });
+
 document.getElementById('goBtn').addEventListener('click',()=>{
   S=mkState();
   const raw=document.getElementById('iName').value.trim()||'Player 1';
@@ -551,15 +562,16 @@ document.getElementById('goBtn').addEventListener('click',()=>{
   document.getElementById('setupScreen').classList.add('hidden');
   document.getElementById('hud').classList.remove('hidden');
   document.getElementById('banner').classList.remove('hidden');
+  resetKeeper();
   renderDots();
   nextTurn();
 });
 
-// ─── TURN FLOW ───────────────────────────────────────────────────
+// ─── TURN FLOW ──────────────────────────────────────────────────
 function nextTurn(){
   if(matchOver()) return endMatch();
   renderDots();
-  if(S.idx%2===0){ // player shoots
+  if(S.idx%2===0){
     setBanner('YOUR SHOT — click the goal');
     S.phase='shoot_aim';
     enableAim();
@@ -597,29 +609,22 @@ function matchOver(){
   return false;
 }
 
-// ─── PLAYER SHOOT ────────────────────────────────────────────────
-let _aimMove, _aimClick;
-
+// ─── PLAYER SHOOT ───────────────────────────────────────────────
+let _aimClick;
 function enableAim(){
-  const wrap=document.getElementById('pitchWrap');
-  const svg=document.getElementById('pitchSvg');
-
-  _aimMove=e=>{
-    if(S.phase!=='shoot_aim') return;
-  };
+  const svg=document.getElementById('scene');
   _aimClick=e=>{
     if(S.phase!=='shoot_aim') return;
     const r=svg.getBoundingClientRect();
     const x=((e.clientX-r.left)/r.width)*800;
-    const y=((e.clientY-r.top)/r.height)*500;
-    // clamp inside goal front face with ball-radius margin
+    const y=((e.clientY-r.top)/r.height)*450;
     const tx=Math.max(GF.x+BALL_R+2,Math.min(GF.x+GF.w-BALL_R-2,x));
     const ty=Math.max(GF.y+BALL_R+2,Math.min(GF.y+GF.h-BALL_R-2,y));
     S.target={x:tx,y:ty};
-    wrap.removeEventListener('click',_aimClick);
+    svg.removeEventListener('click',_aimClick);
     startPowerMeter();
   };
-  wrap.addEventListener('click',_aimClick);
+  svg.addEventListener('click',_aimClick);
 }
 
 function startPowerMeter(){
@@ -659,107 +664,115 @@ document.addEventListener('keydown',e=>{
 
 function doPlayerShot(){
   const fx=S.target.x, fy=S.target.y;
-  const ctrl={x:fx,y:(SPOT.y+fy)/2 - 30}; // slight arc upward
+  const ctrl={x:fx,y:(SPOT.y+fy)/2-25};
   const dur=1600-S.pow*750;
 
-  // keeper AI dive
-  const dc=S.dc;
+  // AI keeper dive — choose target then dive
   let kx,ky,reach;
   if(S.diff==='easy'){
-    const cs=[{x:GF.x+55,y:GF.y+80},{x:GF.x+GF.w-55,y:GF.y+80},{x:GF.x+55,y:GF.y+GF.h-60},{x:GF.x+GF.w-55,y:GF.y+GF.h-60}];
-    const c=cs[Math.floor(Math.random()*4)]; kx=c.x; ky=c.y; reach=55;
+    const cs=[{x:GF.x+55,y:GF.y+80},{x:GF.x+GF.w-55,y:GF.y+80},{x:GF.x+60,y:GF.y+GF.h-60},{x:GF.x+GF.w-60,y:GF.y+GF.h-60}];
+    const c=cs[Math.floor(Math.random()*4)]; kx=c.x; ky=c.y; reach=58;
   } else if(S.diff==='medium'){
-    kx=fx+(Math.random()-.5)*150; ky=fy+(Math.random()-.5)*90; reach=65;
+    kx=fx+(Math.random()-.5)*150; ky=fy+(Math.random()-.5)*90; reach=68;
   } else {
-    kx=fx+(Math.random()-.5)*50; ky=fy+(Math.random()-.5)*35; reach=78;
+    kx=fx+(Math.random()-.5)*55; ky=fy+(Math.random()-.5)*40; reach=80;
   }
-  setTimeout(()=>moveKeeper(kx,ky,reach),dur*0.28);
+  // clamp keeper reach inside goal area so they don't leap out
+  kx=Math.max(GF.x+25,Math.min(GF.x+GF.w-25,kx));
+  ky=Math.max(GF.y+30,Math.min(GF.y+GF.h-20,ky));
+  S._kr={x:kx,y:ky,r:reach};
+
+  setTimeout(()=>setKeeperDelta(kx,ky,false),dur*0.28);
 
   animBall(SPOT,ctrl,{x:fx,y:fy},dur,()=>{
-    // post check
     const post=checkPost(fx,fy);
     if(post!==null){
       showFlash('🥅 POST!',null);
       setTimeout(()=>{
-        const deflx=post ? fx : (fx<400?GF.x-40:GF.x+GF.w+40);
-        const deflGoal=post && fy>GF.y+BALL_R && fy<GF.y+GF.h-BALL_R;
-        recordKick('A',deflGoal);
+        const goal=post&&fy>GF.y+BALL_R&&fy<GF.y+GF.h-BALL_R;
+        if(goal&&S.pow>0.78) trigShake();
+        showFlash(goal?'⚽ GOAL!':'OFF THE POST!',goal);
+        recordKick('A',goal);
         setTimeout(resetRound,900);
-      },600);
+      },650);
       return;
     }
     const inGoal=fx>GF.x+BALL_R&&fx<GF.x+GF.w-BALL_R&&fy>GF.y+BALL_R&&fy<GF.y+GF.h-BALL_R;
     let saved=false;
-    if(inGoal&&S._kr){
-      saved=Math.hypot(S._kr.x-fx,S._kr.y-fy)<S._kr.r;
-    }
+    if(inGoal&&S._kr) saved=Math.hypot(S._kr.x-fx,S._kr.y-fy)<S._kr.r;
     const goal=inGoal&&!saved;
     if(goal&&S.pow>0.78) trigShake();
-    showFlash(goal?'⚽ GOAL!':'SAVED! 🧤', goal);
+    showFlash(goal?'⚽ GOAL!':(inGoal?'SAVED! 🧤':'MISS! 😬'),goal);
     recordKick('A',goal);
     setTimeout(resetRound,1300);
   });
 }
 
-function moveKeeper(kx,ky,reach){
-  S._kr={x:kx,y:ky,r:reach||65};
-  const dx=kx-KBASE.x, dy=ky-KBASE.y;
-  const rot=Math.max(-52,Math.min(52,dx/4.2));
-  const k=document.getElementById('keeper');
-  k.style.transform=`translate(${dx}px,${Math.min(30,dy)}px) rotate(${rot}deg)`;
-}
-
-// ─── CPU SHOOT / PLAYER KEEPS ────────────────────────────────────
+// ─── PLAYER KEEPS — drag keeper to save ─────────────────────────
 function startKeeperRound(){
-  setBanner('DEFEND — MOVE KEEPER TO SAVE');
-  // build cpu shot
+  setBanner('DEFEND — DRAG THE KEEPER!');
+  const err=S.dc.cpuErr;
   const tx=GF.x+BALL_R+10+Math.random()*(GF.w-BALL_R*2-20);
   const ty=GF.y+BALL_R+10+Math.random()*(GF.h-BALL_R*2-20);
   const pow=0.4+Math.random()*0.55;
   const dur=1600-pow*750;
-  S.cpuPlan={target:{x:tx,y:ty},ctrl:{x:tx,y:(SPOT.y+ty)/2-30},dur};
-  S._kr=null;
+  S.cpuPlan={target:{x:tx,y:ty},ctrl:{x:tx,y:(SPOT.y+ty)/2-25},dur,pow};
 
-  // reset keeper to home, then let player drag it
+  resetKeeper();
   S.keeperPos={x:KBASE.x,y:KBASE.y};
-  document.getElementById('keeper').style.transform='';
-
+  S._kr=null;
   S.phase='keep_dive';
-  const hint=document.getElementById('diveHint');
-  hint.classList.remove('hidden');
-  hint.firstElementChild.textContent='MOVE KEEPER TO SAVE';
 
-  // countdown
+  document.getElementById('diveHint').classList.remove('hidden');
+  document.getElementById('scene').classList.add('dragmode');
+
   const totalMs=S.dc.diveMs;
   const start=performance.now();
   diveCountdown=setInterval(()=>{
     const rem=Math.max(0,(totalMs-(performance.now()-start))/1000);
-    document.getElementById('diveTimer').textContent=rem>0?rem.toFixed(1)+'s':'Shooting!';
+    document.getElementById('diveTimer').textContent=rem>0?rem.toFixed(1)+'s':'KICK!';
     if(rem<=0){
       clearInterval(diveCountdown); diveCountdown=null;
       fireCpuShot();
     }
   },50);
 
-  // enable keeper dragging
-  const wrap=document.getElementById('pitchWrap');
-  wrap.classList.add('keeper-mode');
-  const svg=document.getElementById('pitchSvg');
-  function onMove(e){
+  // Drag handlers
+  const svg=document.getElementById('scene');
+  let dragging=false;
+  function onDown(e){
     if(S.phase!=='keep_dive') return;
+    dragging=true;
+    moveKeeperFromEvent(e);
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(!dragging||S.phase!=='keep_dive') return;
+    moveKeeperFromEvent(e);
+  }
+  function onUp(){dragging=false;}
+  function moveKeeperFromEvent(e){
     const r=svg.getBoundingClientRect();
     const x=((e.clientX-r.left)/r.width)*800;
-    const y=((e.clientY-r.top)/r.height)*500;
+    const y=((e.clientY-r.top)/r.height)*450;
     const kx=Math.max(GF.x+25,Math.min(GF.x+GF.w-25,x));
     const ky=Math.max(GF.y+30,Math.min(GF.y+GF.h-20,y));
     S.keeperPos={x:kx,y:ky};
-    const dx=kx-KBASE.x, dy=ky-KBASE.y;
-    const k=document.getElementById('keeper');
-    k.style.transition='none';
-    k.style.transform=`translate(${dx}px,${Math.min(30,dy)}px) rotate(${Math.max(-52,Math.min(52,dx/4.2))}deg)`;
+    setKeeperDelta(kx,ky,true); // instant follow
   }
-  wrap.addEventListener('mousemove',onMove);
-  S._keeperCleanup=()=>{wrap.removeEventListener('mousemove',onMove);wrap.classList.remove('keeper-mode');};
+  svg.addEventListener('mousedown',onDown);
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onUp);
+  // touch
+  svg.addEventListener('touchstart',e=>{if(e.touches[0]){onDown({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:()=>e.preventDefault()});}});
+  window.addEventListener('touchmove',e=>{if(e.touches[0]){onMove({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});}});
+  window.addEventListener('touchend',onUp);
+  S._keeperCleanup=()=>{
+    svg.removeEventListener('mousedown',onDown);
+    window.removeEventListener('mousemove',onMove);
+    window.removeEventListener('mouseup',onUp);
+    document.getElementById('scene').classList.remove('dragmode');
+  };
 }
 
 function fireCpuShot(){
@@ -767,8 +780,6 @@ function fireCpuShot(){
   document.getElementById('diveHint').classList.add('hidden');
   S.phase='animating_keep';
   const plan=S.cpuPlan;
-  // restore keeper transition
-  document.getElementById('keeper').style.transition='';
 
   animBall(SPOT,plan.ctrl,plan.target,plan.dur,()=>{
     const {x:tx,y:ty}=plan.target;
@@ -776,38 +787,36 @@ function fireCpuShot(){
     if(post!==null){
       showFlash('🥅 POST!',null);
       setTimeout(()=>{
-        const deflGoal=post && ty>GF.y+BALL_R && ty<GF.y+GF.h-BALL_R;
-        recordKick('B',deflGoal);
+        const goal=post&&ty>GF.y+BALL_R&&ty<GF.y+GF.h-BALL_R;
+        showFlash(goal?'CPU SCORES!':'OFF THE POST!',!goal);
+        recordKick('B',goal);
         setTimeout(resetRound,900);
-      },600);
+      },650);
       return;
     }
     const inGoal=tx>GF.x+BALL_R&&tx<GF.x+GF.w-BALL_R&&ty>GF.y+BALL_R&&ty<GF.y+GF.h-BALL_R;
-    const reach=S.diff==='hard'?62:(S.diff==='medium'?72:84);
+    const reach=S.diff==='hard'?64:(S.diff==='medium'?74:86);
     const d=Math.hypot(S.keeperPos.x-tx,S.keeperPos.y-ty);
     const saved=d<reach||!inGoal;
     const goal=!saved;
+    if(goal&&plan.pow>0.78) trigShake();
     showFlash(goal?'CPU SCORES!':'YOU SAVED IT! 🧤',!goal);
     recordKick('B',goal);
     setTimeout(resetRound,1300);
   });
 }
 
-// ─── POST DEFLECTION ─────────────────────────────────────────────
-// returns true=deflects in, false=deflects out, null=no post hit
+// ─── POST DEFLECTION ────────────────────────────────────────────
 function checkPost(x,y){
-  const inHeight=y>GF.y+BALL_R&&y<GF.y+GF.h-BALL_R;
-  const inWidth=x>GF.x+BALL_R&&x<GF.x+GF.w-BALL_R;
-  // left post
-  if(inHeight&&Math.abs(x-(GF.x))<POST_W+8) return Math.random()<0.45; // 45% goes in
-  // right post
-  if(inHeight&&Math.abs(x-(GF.x+GF.w))<POST_W+8) return Math.random()<0.45;
-  // crossbar
-  if(inWidth&&Math.abs(y-GF.y)<POST_W+6) return Math.random()<0.3;
+  const inH=y>GF.y+BALL_R&&y<GF.y+GF.h-BALL_R;
+  const inW=x>GF.x+BALL_R&&x<GF.x+GF.w-BALL_R;
+  if(inH&&Math.abs(x-GF.x)<14) return Math.random()<0.45;
+  if(inH&&Math.abs(x-(GF.x+GF.w))<14) return Math.random()<0.45;
+  if(inW&&Math.abs(y-GF.y)<14) return Math.random()<0.3;
   return null;
 }
 
-// ─── BALL ANIMATION ──────────────────────────────────────────────
+// ─── BALL ANIM ──────────────────────────────────────────────────
 function bezier(p0,p1,p2,t){
   const u=1-t;
   return{x:u*u*p0.x+2*u*t*p1.x+t*t*p2.x, y:u*u*p0.y+2*u*t*p1.y+t*t*p2.y};
@@ -817,27 +826,23 @@ function animBall(p0,p1,p2,dur,done){
   const ball=document.getElementById('ball');
   const shadow=document.getElementById('ballShadow');
   const start=performance.now();
-  // progress t: ball shrinks as it goes toward goal (perspective)
   function step(now){
     const t=Math.min(1,(now-start)/dur);
     const p=bezier(p0,p1,p2,t);
-    // scale: large near spot (1.3), small deep in goal (0.5)
-    const scale=1.3-t*0.65;
-    const bx=p.x, by=p.y;
-    ball.style.transform=`translate(${bx-SPOT.x}px,${by-SPOT.y}px) scale(${scale})`;
-    // Shadow fades and shrinks
-    shadow.setAttribute('cy', 472+(by-SPOT.y));
-    shadow.setAttribute('cx', 400+(bx-SPOT.x));
+    const scale=1.25-t*0.65;
+    ball.style.transform=`translate(${p.x-SPOT.x}px,${p.y-SPOT.y}px) scale(${scale})`;
+    shadow.setAttribute('cy', 424+(p.y-SPOT.y));
+    shadow.setAttribute('cx', 400+(p.x-SPOT.x));
     shadow.setAttribute('rx', 18*scale);
     shadow.setAttribute('ry', 5*scale);
-    shadow.setAttribute('opacity', 0.35*(1-t*0.5));
+    shadow.setAttribute('opacity', 0.4*(1-t*0.5));
     if(t<1) requestAnimationFrame(step);
     else done&&done();
   }
   requestAnimationFrame(step);
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────
+// ─── HELPERS ────────────────────────────────────────────────────
 function showFlash(txt,good){
   const el=document.createElement('div');
   el.className='kick-flash';
@@ -846,12 +851,10 @@ function showFlash(txt,good){
   document.getElementById('stage').appendChild(el);
   setTimeout(()=>el.remove(),1400);
 }
-
 function trigShake(){
   document.body.classList.add('shake');
   setTimeout(()=>document.body.classList.remove('shake'),240);
 }
-
 function recordKick(team,goal){
   S.kicks.push({t:team,g:goal});
   if(team==='A'&&goal) S.scoreA++;
@@ -859,7 +862,6 @@ function recordKick(team,goal){
   S.idx++;
   renderDots();
 }
-
 function resetRound(){
   cancelAnimationFrame(powAnim); powAnim=null;
   clearInterval(diveCountdown); diveCountdown=null;
@@ -867,16 +869,16 @@ function resetRound(){
   document.getElementById('powerWrap').classList.add('hidden');
   document.getElementById('diveHint').classList.add('hidden');
   document.getElementById('ball').style.transform='';
-  document.getElementById('keeper').style.transition='';
-  document.getElementById('keeper').style.transform='';
-  S._kr=null; S.target=null; S.pow=null; S.keeperPos={x:KBASE.x,y:KBASE.y};
-  const shadow=document.getElementById('ballShadow');
-  shadow.setAttribute('cx','400'); shadow.setAttribute('cy','472');
-  shadow.setAttribute('rx','18'); shadow.setAttribute('ry','5'); shadow.setAttribute('opacity','0.35');
+  resetKeeper();
+  S._kr=null; S.target=null; S.pow=null;
+  S.keeperPos={x:KBASE.x,y:KBASE.y};
+  const sh=document.getElementById('ballShadow');
+  sh.setAttribute('cx','400'); sh.setAttribute('cy','424');
+  sh.setAttribute('rx','18'); sh.setAttribute('ry','5'); sh.setAttribute('opacity','0.4');
   nextTurn();
 }
 
-// ─── MATCH END ───────────────────────────────────────────────────
+// ─── MATCH END ──────────────────────────────────────────────────
 function endMatch(){
   S.phase='over';
   const won=S.scoreA>S.scoreB;
@@ -884,7 +886,6 @@ function endMatch(){
   submitScore(pts,won);
   setTimeout(()=>showResult(won,pts),400);
 }
-
 function showResult(won,pts){
   const ov=document.createElement('div');
   ov.className='res-ov';
@@ -898,7 +899,7 @@ function showResult(won,pts){
   document.getElementById('cRes').addEventListener('click',()=>{ov.remove();showLB();});
 }
 
-// ─── LEADERBOARD ─────────────────────────────────────────────────
+// ─── LEADERBOARD ────────────────────────────────────────────────
 async function submitScore(pts,won){
   try{
     await fetch('/api/leaderboard',{method:'POST',
@@ -913,7 +914,6 @@ async function submitScore(pts,won){
   d[id].pts+=pts; d[id].gp+=1;
   localStorage.setItem(key,JSON.stringify(d));
 }
-
 async function fetchLB(){
   try{
     const r=await fetch('/api/leaderboard',{signal:AbortSignal.timeout(4000)});
@@ -922,7 +922,6 @@ async function fetchLB(){
   const d=JSON.parse(localStorage.getItem('ps_lb')||'{}');
   return{e:Object.values(d).sort((a,b)=>b.pts-a.pts).slice(0,10),src:'local'};
 }
-
 async function showLB(){
   const{e,src}=await fetchLB();
   const panel=document.createElement('div');
@@ -945,10 +944,8 @@ async function showLB(){
     document.getElementById('setupScreen').classList.remove('hidden');
   });
 }
-
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-// ─── INIT ────────────────────────────────────────────────────────
 fillSelects();
 </script>
 </body>
