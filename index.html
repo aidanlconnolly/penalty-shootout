@@ -284,50 +284,56 @@ body.shake #stage{animation:shake 220ms ease-out;}
      Back face:  x=170 to x=630, y=68 to y=325 (inset 30, raised 17)              -->
 
 <!-- Back net face (solid colour so stands don't show through) -->
-<rect x="170" y="68" width="460" height="257" fill="#0d2a14"/>
-<rect x="170" y="68" width="460" height="257" fill="url(#netBack)"/>
+<rect x="209" y="107" width="382" height="218" fill="#0d2a14"/>
+<rect x="209" y="107" width="382" height="218" fill="url(#netBack)"/>
 <!-- Subtle net droop shading at bottom -->
-<path d="M 170,260 Q 400,295 630,260 L 630,325 L 170,325 Z" fill="rgba(0,0,0,0.18)"/>
+<path d="M 209,260 Q 400,290 591,260 L 591,325 L 209,325 Z" fill="rgba(0,0,0,0.18)"/>
 
 <!-- Top net panel (the roof of the goal in perspective) -->
-<polygon points="140,85 660,85 630,68 170,68" fill="#0a2010"/>
-<polygon points="140,85 660,85 630,68 170,68" fill="url(#netTop)"/>
+<polygon points="179,124 621,124 591,107 209,107" fill="#0a2010"/>
+<polygon points="179,124 621,124 591,107 209,107" fill="url(#netTop)"/>
 
 <!-- Left net side panel -->
-<polygon points="140,85 140,348 170,325 170,68" fill="#0d2814"/>
-<polygon points="140,85 140,348 170,325 170,68" fill="url(#netSide)"/>
+<polygon points="179,124 179,348 209,325 209,107" fill="#0d2814"/>
+<polygon points="179,124 179,348 209,325 209,107" fill="url(#netSide)"/>
 
 <!-- Right net side panel -->
-<polygon points="660,85 660,348 630,325 630,68" fill="#0d2814"/>
-<polygon points="660,85 660,348 630,325 630,68" fill="url(#netSide)"/>
+<polygon points="621,124 621,348 591,325 591,107" fill="#0d2814"/>
+<polygon points="621,124 621,348 591,325 591,107" fill="url(#netSide)"/>
 
 <!-- Goal floor (shadow inside) -->
-<polygon points="140,348 660,348 630,325 170,325" fill="rgba(0,0,0,0.35)"/>
+<polygon points="179,348 621,348 591,325 209,325" fill="rgba(0,0,0,0.35)"/>
 
 <!-- Back posts (visible inside goal depth) -->
-<rect x="167" y="65" width="6" height="263" fill="#cfcfcf" opacity="0.65"/>
-<rect x="627" y="65" width="6" height="263" fill="#cfcfcf" opacity="0.65"/>
-<rect x="167" y="65" width="466" height="6" fill="#cfcfcf" opacity="0.65"/>
+<rect x="206" y="104" width="6" height="221" fill="#cfcfcf" opacity="0.65"/>
+<rect x="588" y="104" width="6" height="221" fill="#cfcfcf" opacity="0.65"/>
+<rect x="206" y="104" width="388" height="6" fill="#cfcfcf" opacity="0.65"/>
 
 <!-- ── FRONT GOAL FRAME — solid white, properly connected at corners ── -->
 <!-- Crossbar across the top, full width (overlaps post corners) -->
-<rect x="130" y="78" width="540" height="15" fill="url(#postTB)" filter="url(#postShadow)"/>
+<rect x="169" y="117" width="462" height="15" fill="url(#postTB)" filter="url(#postShadow)"/>
 <!-- Posts — drawn AFTER crossbar so they overlap visually at corners -->
-<rect x="130" y="78" width="15" height="277" fill="url(#postLR)" filter="url(#postShadow)"/>
-<rect x="655" y="78" width="15" height="277" fill="url(#postLR)" filter="url(#postShadow)"/>
+<rect x="169" y="117" width="15" height="238" fill="url(#postLR)" filter="url(#postShadow)"/>
+<rect x="616" y="117" width="15" height="238" fill="url(#postLR)" filter="url(#postShadow)"/>
 <!-- Corner caps to make joints look like a real welded frame -->
-<rect x="130" y="78" width="15" height="15" fill="url(#postTB)"/>
-<rect x="655" y="78" width="15" height="15" fill="url(#postTB)"/>
+<rect x="169" y="117" width="15" height="15" fill="url(#postTB)"/>
+<rect x="616" y="117" width="15" height="15" fill="url(#postTB)"/>
 <!-- Highlight strips for 3D look -->
-<rect x="133" y="80" width="3" height="273" fill="rgba(255,255,255,0.85)" rx="1"/>
-<rect x="658" y="80" width="3" height="273" fill="rgba(255,255,255,0.85)" rx="1"/>
-<rect x="133" y="80" width="534" height="3" fill="rgba(255,255,255,0.85)" rx="1"/>
+<rect x="172" y="119" width="3" height="234" fill="rgba(255,255,255,0.85)" rx="1"/>
+<rect x="619" y="119" width="3" height="234" fill="rgba(255,255,255,0.85)" rx="1"/>
+<rect x="172" y="119" width="456" height="3" fill="rgba(255,255,255,0.85)" rx="1"/>
 <!-- Shadow strips on inner side of posts -->
-<rect x="142" y="93" width="2" height="262" fill="rgba(0,0,0,0.2)"/>
-<rect x="657" y="93" width="2" height="262" fill="rgba(0,0,0,0.2)"/>
+<rect x="181" y="132" width="2" height="223" fill="rgba(0,0,0,0.2)"/>
+<rect x="618" y="132" width="2" height="223" fill="rgba(0,0,0,0.2)"/>
 
 <!-- Goal line — clearly drawn between the two front posts -->
-<line x1="145" y1="349" x2="655" y2="349" stroke="#ffffff" stroke-width="3" stroke-linecap="square"/>
+<line x1="184" y1="349" x2="616" y2="349" stroke="#ffffff" stroke-width="3" stroke-linecap="square"/>
+
+<!-- Depth bars: angled top edges connecting front post corners to back of goal -->
+<line x1="169" y1="117" x2="209" y2="107" stroke="white" stroke-width="6" stroke-linecap="round" filter="url(#postShadow)"/>
+<line x1="631" y1="117" x2="591" y2="107" stroke="white" stroke-width="6" stroke-linecap="round" filter="url(#postShadow)"/>
+<!-- Back top crossbar connecting left and right back posts -->
+<line x1="209" y1="107" x2="591" y2="107" stroke="white" stroke-width="5" stroke-linecap="round" opacity="0.7" filter="url(#postShadow)"/>
 
 <!-- ── KEEPER ── wrapper has BASE position via SVG transform.
      Inner #keeper gets CSS transform DELTAS only. -->
@@ -402,7 +408,7 @@ body.shake #stage{animation:shake 220ms ease-out;}
 
 <!-- ── BALL on penalty spot ── -->
 <!-- Penalty spot drawn UNDER the ball -->
-<circle cx="400" cy="412" r="4.5" fill="rgba(255,255,255,0.95)"/>
+<circle cx="400" cy="412" r="6" fill="white"/>
 
 <g id="ball" style="transform-origin:400px 412px;">
   <ellipse id="ballShadow" cx="400" cy="424" rx="18" ry="5" fill="rgba(0,0,0,0.4)"/>
@@ -473,13 +479,13 @@ const COUNTRIES=[
 ];
 
 const DCFG={
-  easy:  {powSpeed:0.9,  keeperSkill:0.30, cpuErr:0.45, diveMs:900,  winPts:1,  lossPts:-3},
-  medium:{powSpeed:1.55, keeperSkill:0.55, cpuErr:0.24, diveMs:600,  winPts:2,  lossPts:-2},
-  hard:  {powSpeed:2.2,  keeperSkill:0.78, cpuErr:0.12, diveMs:380,  winPts:3,  lossPts:-1},
+  easy:  {powSpeed:0.9,  keeperSkill:0.30, cpuErr:0.45, diveMs:1900,  winPts:1,  lossPts:-3},
+  medium:{powSpeed:1.55, keeperSkill:0.55, cpuErr:0.24, diveMs:1600,  winPts:2,  lossPts:-2},
+  hard:  {powSpeed:2.2,  keeperSkill:0.78, cpuErr:0.12, diveMs:1380,  winPts:3,  lossPts:-1},
 };
 
 // SVG coords (viewBox 800x450)
-const GF={x:140,y:85,w:520,h:263}; // goal front rect
+const GF={x:179,y:124,w:442,h:224}; // goal front rect
 const BALL_R=17;
 const SPOT={x:400,y:412};
 const KBASE={x:400,y:252};
@@ -599,13 +605,16 @@ function renderDots(){
 function matchOver(){
   const kA=S.kicks.filter(k=>k.t==='A').length;
   const kB=S.kicks.filter(k=>k.t==='B').length;
+  // In golden goal, only decide once both have shot in the round (kA===kB)
+  if(S.golden){
+    return kA===kB&&S.scoreA!==S.scoreB;
+  }
   const remA=Math.max(0,5-kA), remB=Math.max(0,5-kB);
   if(Math.abs(S.scoreA-S.scoreB)>Math.max(remA,remB)) return true;
   if(kA>=5&&kB>=5){
     if(S.scoreA===S.scoreB){S.golden=true;return false;}
     return true;
   }
-  if(S.golden&&S.idx>=10&&S.idx%2===0&&S.scoreA!==S.scoreB) return true;
   return false;
 }
 
@@ -704,7 +713,8 @@ function doPlayerShot(){
     if(goal&&S.pow>0.78) trigShake();
     showFlash(goal?'⚽ GOAL!':(inGoal?'SAVED! 🧤':'MISS! 😬'),goal);
     recordKick('A',goal);
-    setTimeout(resetRound,1300);
+    if(!goal&&inGoal){animBallReturn({x:fx,y:fy},()=>setTimeout(resetRound,300));}
+    else{setTimeout(resetRound,1300);}
   });
 }
 
@@ -802,7 +812,8 @@ function fireCpuShot(){
     if(goal&&plan.pow>0.78) trigShake();
     showFlash(goal?'CPU SCORES!':'YOU SAVED IT! 🧤',!goal);
     recordKick('B',goal);
-    setTimeout(resetRound,1300);
+    if(!goal&&inGoal){animBallReturn({x:tx,y:ty},()=>setTimeout(resetRound,300));}
+    else{setTimeout(resetRound,1300);}
   });
 }
 
@@ -836,6 +847,29 @@ function animBall(p0,p1,p2,dur,done){
     shadow.setAttribute('rx', 18*scale);
     shadow.setAttribute('ry', 5*scale);
     shadow.setAttribute('opacity', 0.4*(1-t*0.5));
+    if(t<1) requestAnimationFrame(step);
+    else done&&done();
+  }
+  requestAnimationFrame(step);
+}
+
+// ─── BALL RETURN ANIM ───────────────────────────────────────────
+function animBallReturn(from,done){
+  const ball=document.getElementById('ball');
+  const shadow=document.getElementById('ballShadow');
+  const start=performance.now();
+  const dur=500;
+  function step(now){
+    const t=Math.min(1,(now-start)/dur);
+    const ease=t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    const p={x:from.x+(SPOT.x-from.x)*ease,y:from.y+(SPOT.y-from.y)*ease};
+    const scale=0.55+ease*0.45;
+    ball.style.transform=`translate(${p.x-SPOT.x}px,${p.y-SPOT.y}px) scale(${scale})`;
+    shadow.setAttribute('cy',424+(p.y-SPOT.y));
+    shadow.setAttribute('cx',400+(p.x-SPOT.x));
+    shadow.setAttribute('rx',18*scale);
+    shadow.setAttribute('ry',5*scale);
+    shadow.setAttribute('opacity','0.4');
     if(t<1) requestAnimationFrame(step);
     else done&&done();
   }
