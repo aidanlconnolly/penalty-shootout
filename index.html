@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Penalty Shoot-out</title>
+<style>
+  :root {
+    --sky1: #7ec8ff;
+    --sky2: #b8e2ff;
+    --grass1: #2f8f3f;
+    --grass2: #43b557;
+    --pitch1: #c45c2a;
+    --pitch2: #d97b48;
+    --ink: #14202c;
+    --paper: #fdfdfd;
+    --accent: #f7c948;
+    --danger: #e23b3b;
+    --ok: #2ecc71;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(#0a1622, #11253a);
+    overflow: hidden;
+    user-select: none;
+  }
+  #app {
+    position: relative;
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+  }
+  #stage {
+    position: absolute; inset: 0;
+    transition: transform 80ms ease-out;
+  }
+  body.shake-mild #stage { animation: shake 220ms ease-out; }
+  @keyframes shake {
+    0%   { transform: translate(0,0); }
+    20%  { transform: translate(-2px, 1px); }
+    40%  { transform: translate(2px, -1px); }
+    60%  { transform: translate(-1px, 2px); }
+    80%  { transform: translate(1px, -2px); }
+    100% { transform: translate(0,0); }
+  }
+
+  /* ========= setup screen ========= */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at top, #1c3a5e, #0a1622);
+    color: var(--paper);
+    z-index: 50;
+  }
+  .card {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    padding: 32px 36px;
+    width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .card h1 {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    letter-spacing: 0.5px;
+  }
+  .card .sub {
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    margin-bottom: 22px;
+  }
+  label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+  input[type=text], select {
+    width: 100%; padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.25);
+    color: var(--paper);
+    font-size: 15px;
+    margin-bottom: 16px;
+    outline: none;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+  .row { display: flex; gap: 12px; }
+  .row > * { flex: 1; }
+  .difficulty {
+    display: flex; gap: 8px; margin-bottom: 22px;
+  }
+  .difficulty button {
+    flex: 1;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(0,0,0,0.2);
+    color: var(--paper);
+    cursor: pointer;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 120ms;
+  }
+  .difficulty button.active {
+    background: var(--accent);
+    color: var(--ink);
+    border-color: var(--accent);
+  }
+  .start-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #4ade80, #22c55e);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(34,197,94,0.35);
+  }
+  .start-btn:hover { transform: translateY(-1px); }
+
+  /* ========= game stage ========= */
+  .scene {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 40%, var(--grass2) 41%, var(--grass1) 60%, var(--pitch2) 61%, var(--pitch1) 100%);
+  }
+  .scene::before {
+    /* cartoon stadium silhouette */
+    content: '';
+    position: absolute; left: 0; right: 0; top: 30%; height: 12%;
+    background:
+      radial-gradient(circle at 10% 80%, #6b8a4a 0 14%, transparent 15%),
+      radial-gradient(circle at 30% 70%, #50703a 0 12%, transparent 13%),
+      radial-gradient(circle at 70% 75%, #50703a 0 14%, transparent 15%),
+      radial-gradient(circle at 90% 78%, #6b8a4a 0 12%, transparent 13%);
+    opacity: 0.6;
+  }
+  /* bunting */
+  .bunting {
+    position: absolute; top: 14px; left: 0; right: 0;
+    height: 30px;
+    background-image: repeating-linear-gradient(45deg, #e23b3b 0 12px, #f7c948 12px 24px, #4ea3ff 24px 36px, #2ecc71 36px 48px);
+    -webkit-mask-image: radial-gradient(circle 14px at 12px 0, black 13px, transparent 14px);
+    -webkit-mask-repeat: repeat-x;
+    mask-image: radial-gradient(circle 14px at 12px 0, black 13px, transparent 14px);
+    mask-repeat: repeat-x;
+    opacity: 0.85;
+  }
+
+  /* HUD */
+  .hud-top {
+    position: absolute; top: 18px; left: 0; right: 0;
+    display: flex; justify-content: center; align-items: center;
+    gap: 24px;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .team {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 30px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 13px;
+  }
+  .team .flag { font-size: 18px; }
+  .score-bar {
+    display: flex; gap: 6px;
+  }
+  .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+    border: 2px solid rgba(0,0,0,0.3);
+  }
+  .dot.goal { background: var(--ok); }
+  .dot.miss { background: var(--danger); }
+  .turn-banner {
+    position: absolute; top: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* goal & keeper svg sits in center */
+  .pitch-area {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 720px; max-width: 90vw;
+    aspect-ratio: 16 / 9;
+  }
+  svg.pitch { width: 100%; height: 100%; display: block; overflow: visible; }
+
+  .crosshair {
+    position: absolute;
+    width: 48px; height: 48px;
+    border: 2px solid rgba(255,255,255,0.85);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    mix-blend-mode: screen;
+  }
+  .crosshair::before, .crosshair::after {
+    content:''; position: absolute; background: rgba(255,255,255,0.85);
+  }
+  .crosshair::before { left: 50%; top: -8px; bottom: -8px; width: 2px; transform: translateX(-50%); }
+  .crosshair::after { top: 50%; left: -8px; right: -8px; height: 2px; transform: translateY(-50%); }
+
+  /* meters */
+  .meters {
+    position: absolute;
+    bottom: 16px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 24px; align-items: flex-end;
+    z-index: 8;
+    pointer-events: none;
+  }
+  .meter {
+    background: rgba(0,0,0,0.5);
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: #fff;
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    min-width: 180px;
+  }
+  .meter.locked { opacity: 0.55; }
+  .meter .label { margin-bottom: 6px; color: rgba(255,255,255,0.7); }
+  .bar-h {
+    position: relative;
+    width: 160px; height: 14px;
+    background: linear-gradient(90deg, #e23b3b 0%, #e23b3b 25%, #2ecc71 40%, #2ecc71 60%, #e23b3b 75%, #e23b3b 100%);
+    border-radius: 7px;
+    overflow: hidden;
+  }
+  .bar-h .marker {
+    position: absolute; top: -3px; bottom: -3px; width: 4px;
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px #000;
+  }
+  .bar-v {
+    position: relative;
+    width: 22px; height: 80px;
+    background: linear-gradient(0deg, #f7e08c 0%, #f7c948 30%, #f39c12 65%, #e23b3b 100%);
+    border-radius: 8px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  .bar-v .marker {
+    position: absolute; left: -3px; right: -3px; height: 4px;
+    background: #fff;
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px #000;
+  }
+  .curve-meter svg { display: block; margin: 4px auto 0; }
+
+  /* keeper countdown */
+  .dive-prompt {
+    position: absolute;
+    top: 30%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.7);
+    color: #fff;
+    padding: 18px 30px;
+    border-radius: 14px;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    z-index: 7;
+    pointer-events: none;
+    animation: pulse 600ms infinite alternate;
+  }
+  @keyframes pulse {
+    from { transform: translate(-50%, -50%) scale(1); }
+    to { transform: translate(-50%, -50%) scale(1.06); }
+  }
+
+  /* result overlay */
+  .result-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 60;
+  }
+  .result-card {
+    background: var(--paper);
+    color: var(--ink);
+    border-radius: 18px;
+    padding: 30px 36px;
+    text-align: center;
+    min-width: 320px;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+  }
+  .result-card h2 { margin: 0 0 6px 0; font-size: 32px; }
+  .result-card .delta { font-size: 18px; margin: 8px 0 16px; }
+  .result-card button { padding: 10px 18px; border-radius: 10px; border: none; background: var(--ink); color: #fff; cursor: pointer; font-weight: 600; }
+
+  /* leaderboard panel */
+  .leaderboard {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: rgba(0,0,0,0.78);
+    color: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    min-width: 280px;
+    max-height: 70vh;
+    overflow: auto;
+    z-index: 65;
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 40px rgba(0,0,0,0.4);
+    animation: slidein 280ms ease-out;
+  }
+  @keyframes slidein {
+    from { transform: translateX(110%); opacity: 0; }
+    to   { transform: translateX(0); opacity: 1; }
+  }
+  .leaderboard h3 { margin: 0 0 8px 0; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--accent); }
+  .leaderboard table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .leaderboard th, .leaderboard td { padding: 4px 6px; text-align: left; }
+  .leaderboard th { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(255,255,255,0.2); }
+  .leaderboard td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .leaderboard tr.me td { color: var(--accent); font-weight: 700; }
+  .leaderboard .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .leaderboard .footer button { background: var(--accent); color: var(--ink); border: none; padding: 6px 10px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .leaderboard .source { font-size: 10px; color: rgba(255,255,255,0.45); }
+
+  /* hidden helper */
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <div class="scene"><div class="bunting"></div></div>
+
+    <!-- HUD -->
+    <div class="hud-top hidden" id="hud">
+      <div class="team" id="teamA"><span class="flag">🇧🇷</span><span class="name">YOU</span></div>
+      <div class="score-bar" id="scoreA"></div>
+      <div style="color:#fff;font-weight:800;">VS</div>
+      <div class="score-bar" id="scoreB"></div>
+      <div class="team" id="teamB"><span class="flag">🇺🇾</span><span class="name">CPU</span></div>
+    </div>
+    <div class="turn-banner hidden" id="turnBanner">YOUR SHOT</div>
+
+    <!-- pitch / goal -->
+    <div class="pitch-area" id="pitchArea">
+      <svg class="pitch" viewBox="0 0 800 450" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <pattern id="netPat" width="14" height="14" patternUnits="userSpaceOnUse">
+            <path d="M0 0 L14 14 M14 0 L0 14" stroke="rgba(255,255,255,0.55)" stroke-width="1" fill="none"/>
+          </pattern>
+          <linearGradient id="postGrad" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#d4d4d4"/>
+          </linearGradient>
+        </defs>
+
+        <!-- back of goal net region -->
+        <rect id="goalRect" x="200" y="90" width="400" height="210" fill="url(#netPat)" stroke="none"/>
+        <!-- goal posts -->
+        <rect x="194" y="86" width="12" height="218" fill="url(#postGrad)" rx="3"/>
+        <rect x="594" y="86" width="12" height="218" fill="url(#postGrad)" rx="3"/>
+        <rect x="194" y="82" width="412" height="12" fill="url(#postGrad)" rx="3"/>
+
+        <!-- penalty spot -->
+        <ellipse cx="400" cy="400" rx="14" ry="4" fill="rgba(255,255,255,0.85)"/>
+
+        <!-- keeper group -->
+        <g id="keeper" style="transform-origin: 400px 250px; transition: transform 280ms cubic-bezier(.2,.7,.3,1);">
+          <!-- shadow -->
+          <ellipse cx="400" cy="295" rx="34" ry="6" fill="rgba(0,0,0,0.3)"/>
+          <!-- legs -->
+          <rect x="386" y="240" width="10" height="50" rx="4" fill="#2a3548"/>
+          <rect x="404" y="240" width="10" height="50" rx="4" fill="#2a3548"/>
+          <!-- body -->
+          <path d="M370 185 Q400 175 430 185 L438 245 Q400 255 362 245 Z" fill="#2ecc71"/>
+          <path d="M375 192 L425 192 L432 230 L368 230 Z" fill="#e23b3b" opacity="0.85"/>
+          <!-- arms (out wide for keeper stance) -->
+          <rect x="340" y="190" width="34" height="10" rx="5" fill="#2ecc71" transform="rotate(-18 357 195)"/>
+          <rect x="426" y="190" width="34" height="10" rx="5" fill="#2ecc71" transform="rotate(18 443 195)"/>
+          <!-- gloves -->
+          <circle cx="338" cy="178" r="8" fill="#fff"/>
+          <circle cx="462" cy="178" r="8" fill="#fff"/>
+          <!-- head -->
+          <circle cx="400" cy="170" r="14" fill="#c08864"/>
+          <path d="M388 162 Q400 152 412 162 L412 168 L388 168 Z" fill="#2a1f17"/>
+        </g>
+
+        <!-- ball -->
+        <g id="ball" style="transform-origin: 400px 400px;">
+          <ellipse cx="400" cy="412" rx="16" ry="4" fill="rgba(0,0,0,0.3)"/>
+          <circle cx="400" cy="400" r="18" fill="#fff" stroke="#222" stroke-width="1.5"/>
+          <polygon points="400,388 408,394 405,403 395,403 392,394" fill="#222"/>
+        </g>
+      </svg>
+
+      <!-- crosshair (positioned via JS) -->
+      <div class="crosshair hidden" id="crosshair"></div>
+    </div>
+
+    <!-- meters -->
+    <div class="meters hidden" id="meters">
+      <div class="meter" id="meterAcc">
+        <div class="label">Accuracy</div>
+        <div class="bar-h"><div class="marker" id="markAcc" style="left:0"></div></div>
+      </div>
+      <div class="meter" id="meterPow">
+        <div class="label">Power</div>
+        <div class="bar-v"><div class="marker" id="markPow" style="bottom:0"></div></div>
+      </div>
+      <div class="meter curve-meter" id="meterCurve">
+        <div class="label">Curve</div>
+        <div class="bar-h"><div class="marker" id="markCurve" style="left:50%"></div></div>
+        <svg width="160" height="40" viewBox="0 0 160 40">
+          <path id="curvePreview" d="M10,20 Q80,20 150,20" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="dive-prompt hidden" id="divePrompt">DIVE!</div>
+  </div>
+
+  <!-- setup screen -->
+  <div class="screen" id="setupScreen">
+    <div class="card">
+      <h1>⚽ Penalty Shoot-out</h1>
+      <div class="sub">Best of five. Don't blink.</div>
+
+      <label>Your name</label>
+      <input type="text" id="inputName" maxlength="24" placeholder="Player 1" />
+
+      <div class="row">
+        <div>
+          <label>Your country</label>
+          <select id="inputCountry"></select>
+        </div>
+        <div>
+          <label>Opponent</label>
+          <select id="inputOpponent"></select>
+        </div>
+      </div>
+
+      <label>Difficulty</label>
+      <div class="difficulty" id="difficulty">
+        <button data-diff="easy">Easy</button>
+        <button data-diff="medium" class="active">Medium</button>
+        <button data-diff="hard">Hard</button>
+      </div>
+
+      <button class="start-btn" id="startBtn">Kick off</button>
+    </div>
+  </div>
+
+  <!-- result + leaderboard injected -->
+</div>
+
+<script>
+//============================ DATA =============================
+const COUNTRIES = [
+  ["Brazil","🇧🇷"],["Uruguay","🇺🇾"],["Argentina","🇦🇷"],["England","🏴󠁧󠁢󠁥󠁮󠁧󠁿"],
+  ["France","🇫🇷"],["Germany","🇩🇪"],["Spain","🇪🇸"],["Portugal","🇵🇹"],
+  ["Italy","🇮🇹"],["Netherlands","🇳🇱"],["Belgium","🇧🇪"],["Croatia","🇭🇷"],
+  ["USA","🇺🇸"],["Mexico","🇲🇽"],["Canada","🇨🇦"],["Japan","🇯🇵"],
+  ["South Korea","🇰🇷"],["Australia","🇦🇺"],["Senegal","🇸🇳"],["Morocco","🇲🇦"],
+  ["Nigeria","🇳🇬"],["Ghana","🇬🇭"],["Cameroon","🇨🇲"],["Switzerland","🇨🇭"],
+  ["Denmark","🇩🇰"],["Sweden","🇸🇪"],["Poland","🇵🇱"],["Serbia","🇷🇸"],
+  ["Colombia","🇨🇴"],["Chile","🇨🇱"],["Ecuador","🇪🇨"],["Ireland","🇮🇪"],
+];
+
+const DIFFICULTY = {
+  easy:   { meterSpeed: 1.0, keeperSkill: 0.30, cpuShotErr: 0.40, diveWindow: 600, winPts: 1, lossPts: -3 },
+  medium: { meterSpeed: 1.6, keeperSkill: 0.55, cpuShotErr: 0.22, diveWindow: 450, winPts: 2, lossPts: -2 },
+  hard:   { meterSpeed: 2.2, keeperSkill: 0.78, cpuShotErr: 0.12, diveWindow: 300, winPts: 3, lossPts: -1 },
+};
+
+// goal rect in svg coords
+const GOAL = { x: 200, y: 90, w: 400, h: 210 };
+const KEEPER_HOME = { x: 400, y: 250 };
+const SPOT = { x: 400, y: 400 };
+
+//============================ STATE =============================
+let state;
+function createState() {
+  return {
+    name: '',
+    flag: '🇧🇷',
+    country: 'Brazil',
+    opponentFlag: '🇺🇾',
+    opponentCountry: 'Uruguay',
+    difficulty: 'medium',
+    diff: DIFFICULTY.medium,
+    kicks: [], // {team:'A'|'B', goal:bool}
+    turnIdx: 0, // which kick number total
+    teamA: 0, teamB: 0,
+    phase: 'setup', // setup, shoot_aim, shoot_acc, shoot_pow, shoot_curve, animating, keep_wait, keep_dive, animating_keep, result, golden
+    target: null,
+    acc: null, pow: null, curve: null,
+    cpuShotPlan: null,
+    diveTarget: null,
+    over: false,
+    golden: false,
+  };
+}
+
+//============================ SETUP UI =============================
+function populateCountrySelects() {
+  const a = document.getElementById('inputCountry');
+  const b = document.getElementById('inputOpponent');
+  COUNTRIES.forEach(([n,f], i) => {
+    a.insertAdjacentHTML('beforeend', `<option value="${i}" ${n==='Brazil'?'selected':''}>${f} ${n}</option>`);
+    b.insertAdjacentHTML('beforeend', `<option value="${i}" ${n==='Uruguay'?'selected':''}>${f} ${n}</option>`);
+  });
+  // restore previous
+  const saved = JSON.parse(localStorage.getItem('penalty_profile') || '{}');
+  if (saved.name) document.getElementById('inputName').value = saved.name;
+  if (saved.countryIdx != null) a.value = saved.countryIdx;
+  if (saved.difficulty) {
+    document.querySelectorAll('.difficulty button').forEach(b => b.classList.toggle('active', b.dataset.diff === saved.difficulty));
+  }
+}
+
+document.querySelectorAll('.difficulty button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.difficulty button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+document.getElementById('startBtn').addEventListener('click', () => {
+  state = createState();
+  const nameRaw = document.getElementById('inputName').value.trim() || 'Player 1';
+  state.name = sanitizeName(nameRaw);
+  const ai = +document.getElementById('inputCountry').value;
+  const bi = +document.getElementById('inputOpponent').value;
+  state.country = COUNTRIES[ai][0]; state.flag = COUNTRIES[ai][1];
+  state.opponentCountry = COUNTRIES[bi][0]; state.opponentFlag = COUNTRIES[bi][1];
+  const activeDiff = document.querySelector('.difficulty button.active').dataset.diff;
+  state.difficulty = activeDiff;
+  state.diff = DIFFICULTY[activeDiff];
+
+  localStorage.setItem('penalty_profile', JSON.stringify({ name: state.name, countryIdx: ai, difficulty: activeDiff }));
+
+  // setup HUD
+  document.querySelector('#teamA .flag').textContent = state.flag;
+  document.querySelector('#teamA .name').textContent = state.name.toUpperCase();
+  document.querySelector('#teamB .flag').textContent = state.opponentFlag;
+  document.querySelector('#teamB .name').textContent = state.opponentCountry.toUpperCase();
+  renderScoreBar();
+
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('hud').classList.remove('hidden');
+  document.getElementById('turnBanner').classList.remove('hidden');
+
+  nextTurn();
+});
+
+function sanitizeName(s) {
+  return s.replace(/[\x00-\x1f]/g,'').slice(0,24);
+}
+
+//============================ TURN FLOW =============================
+function nextTurn() {
+  // who shoots? alternate. A shoots on even turnIdx
+  if (checkMatchOver()) return endMatch();
+  const team = (state.turnIdx % 2 === 0) ? 'A' : 'B';
+  renderScoreBar();
+  if (team === 'A') {
+    setBanner('YOUR SHOT — click the goal');
+    state.phase = 'shoot_aim';
+    enableAim();
+  } else {
+    setBanner("DEFEND — wait for the prompt");
+    state.phase = 'keep_wait';
+    startKeeperRound();
+  }
+}
+
+function setBanner(text) {
+  const b = document.getElementById('turnBanner');
+  b.textContent = text;
+}
+
+function renderScoreBar() {
+  const total = state ? Math.max(5, Math.ceil((state.turnIdx)/2) + (state.golden?1:0)) : 5;
+  const baseRounds = state && state.golden ? Math.ceil(state.turnIdx/2) : 5;
+  const sb = (team) => {
+    const el = document.getElementById(team === 'A' ? 'scoreA' : 'scoreB');
+    el.innerHTML = '';
+    const kicks = state.kicks.filter(k => k.team === team);
+    for (let i = 0; i < Math.max(5, kicks.length); i++) {
+      const k = kicks[i];
+      const cls = !k ? '' : (k.goal ? 'goal' : 'miss');
+      el.insertAdjacentHTML('beforeend', `<div class="dot ${cls}"></div>`);
+    }
+  };
+  sb('A'); sb('B');
+}
+
+function checkMatchOver() {
+  // count kicks taken per side
+  const kicksA = state.kicks.filter(k => k.team==='A').length;
+  const kicksB = state.kicks.filter(k => k.team==='B').length;
+  const remA = Math.max(0, 5 - kicksA);
+  const remB = Math.max(0, 5 - kicksB);
+  // early-end: if leader's lead > follower's remaining
+  if (Math.abs(state.teamA - state.teamB) > Math.max(remA, remB)) return true;
+  // normal end after both took 5
+  if (kicksA >= 5 && kicksB >= 5) {
+    if (state.teamA === state.teamB) {
+      state.golden = true;
+      return false; // continue into golden
+    }
+    return true;
+  }
+  // golden goal resolution: after each pair (turnIdx even and >10), if scores differ → over
+  if (state.golden && state.turnIdx >= 10 && state.turnIdx % 2 === 0) {
+    if (state.teamA !== state.teamB) return true;
+  }
+  return false;
+}
+
+//============================ SHOOT FLOW =============================
+function enableAim() {
+  const cross = document.getElementById('crosshair');
+  cross.classList.remove('hidden');
+  const pitch = document.getElementById('pitchArea');
+  const svg = pitch.querySelector('svg');
+
+  function svgPoint(e) {
+    const rect = svg.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 800;
+    const y = ((e.clientY - rect.top) / rect.height) * 450;
+    return { x, y, rect };
+  }
+  function onMove(e) {
+    const p = svgPoint(e);
+    if (p.x < GOAL.x - 30 || p.x > GOAL.x + GOAL.w + 30 || p.y < GOAL.y - 30 || p.y > GOAL.y + GOAL.h + 30) {
+      cross.style.opacity = '0.3';
+    } else cross.style.opacity = '1';
+    cross.style.left = (e.clientX - p.rect.left) + 'px';
+    cross.style.top  = (e.clientY - p.rect.top) + 'px';
+  }
+  function onClick(e) {
+    const p = svgPoint(e);
+    // clamp into goal
+    const tx = Math.max(GOAL.x + 10, Math.min(GOAL.x + GOAL.w - 10, p.x));
+    const ty = Math.max(GOAL.y + 10, Math.min(GOAL.y + GOAL.h - 10, p.y));
+    state.target = { x: tx, y: ty };
+    pitch.removeEventListener('mousemove', onMove);
+    pitch.removeEventListener('click', onClick);
+    cross.style.left = ((tx/800) * p.rect.width) + 'px';
+    cross.style.top  = ((ty/450) * p.rect.height) + 'px';
+    cross.style.opacity = '1';
+    startMeters();
+  }
+  pitch.addEventListener('mousemove', onMove);
+  pitch.addEventListener('click', onClick);
+}
+
+let meterAnim = null;
+function startMeters() {
+  document.getElementById('meters').classList.remove('hidden');
+  // reset
+  document.getElementById('meterAcc').classList.remove('locked');
+  document.getElementById('meterPow').classList.remove('locked');
+  document.getElementById('meterCurve').classList.remove('locked');
+  state.acc = null; state.pow = null; state.curve = null;
+  state.phase = 'shoot_acc';
+  setBanner('Lock ACCURACY (click)');
+  const start = performance.now();
+  const speed = state.diff.meterSpeed;
+
+  function tick(now) {
+    const t = (now - start) / 1000;
+    // accuracy bar: oscillate left↔right
+    if (state.acc === null) {
+      const v = (Math.sin(t * 2.6 * speed) + 1) / 2; // 0..1
+      document.getElementById('markAcc').style.left = (v * 156) + 'px';
+    }
+    if (state.pow === null) {
+      const v = (Math.sin(t * 2.2 * speed - 0.5) + 1) / 2;
+      document.getElementById('markPow').style.bottom = (v * 76) + 'px';
+    }
+    if (state.curve === null) {
+      const v = (Math.sin(t * 2.0 * speed - 1) + 1) / 2;
+      document.getElementById('markCurve').style.left = (v * 156) + 'px';
+      // update preview curve: v=0 → C, v=1 → reverse C
+      const bend = (v - 0.5) * 2; // -1..1
+      // P1 control y offset (lateral bend)
+      const cy = 20 - bend * 18;
+      document.getElementById('curvePreview').setAttribute('d', `M10,20 Q80,${cy} 150,20`);
+    }
+    meterAnim = requestAnimationFrame(tick);
+  }
+  meterAnim = requestAnimationFrame(tick);
+}
+
+function lockNextMeter() {
+  if (state.phase === 'shoot_acc') {
+    const left = parseFloat(document.getElementById('markAcc').style.left) || 0;
+    state.acc = left / 156; // 0..1, 0.5 perfect
+    document.getElementById('meterAcc').classList.add('locked');
+    state.phase = 'shoot_pow';
+    setBanner('Lock POWER (click)');
+  } else if (state.phase === 'shoot_pow') {
+    const bot = parseFloat(document.getElementById('markPow').style.bottom) || 0;
+    state.pow = bot / 76; // 0..1
+    document.getElementById('meterPow').classList.add('locked');
+    state.phase = 'shoot_curve';
+    setBanner('Lock CURVE (click)');
+  } else if (state.phase === 'shoot_curve') {
+    const left = parseFloat(document.getElementById('markCurve').style.left) || 0;
+    state.curve = (left / 156 - 0.5) * 2; // -1..1
+    document.getElementById('meterCurve').classList.add('locked');
+    state.phase = 'animating';
+    cancelAnimationFrame(meterAnim);
+    setBanner('SHOOT!');
+    executeShot();
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && (state && (state.phase === 'shoot_acc' || state.phase === 'shoot_pow' || state.phase === 'shoot_curve'))) {
+    e.preventDefault();
+    lockNextMeter();
+  }
+});
+document.getElementById('app').addEventListener('click', (e) => {
+  if (state && (state.phase === 'shoot_acc' || state.phase === 'shoot_pow' || state.phase === 'shoot_curve')) {
+    // ignore clicks inside setup overlay
+    if (e.target.closest('#setupScreen')) return;
+    lockNextMeter();
+  }
+});
+
+function executeShot() {
+  // apply accuracy error: distance from 0.5
+  const err = (state.acc - 0.5) * 2; // -1..1
+  const dx = (state.target.x - SPOT.x) + err * 90;
+  const dy = (state.target.y - SPOT.y);
+  const finalTarget = {
+    x: Math.max(GOAL.x - 30, Math.min(GOAL.x + GOAL.w + 30, SPOT.x + dx)),
+    y: Math.max(GOAL.y - 20, Math.min(GOAL.y + GOAL.h + 30, SPOT.y + dy)),
+  };
+  // control point (Bezier P1) for curve
+  const mid = { x: (SPOT.x + finalTarget.x) / 2, y: (SPOT.y + finalTarget.y) / 2 };
+  const perp = { x: -(finalTarget.y - SPOT.y), y: (finalTarget.x - SPOT.x) };
+  const plen = Math.hypot(perp.x, perp.y) || 1;
+  const offsetMag = state.curve * 140;
+  const ctrl = { x: mid.x + (perp.x / plen) * offsetMag, y: mid.y + (perp.y / plen) * offsetMag };
+
+  const duration = 1100 - state.pow * 650; // ms
+  // schedule keeper dive
+  scheduleKeeperDive(finalTarget, duration);
+
+  animateBall(SPOT, ctrl, finalTarget, duration, () => {
+    resolveShot('A', finalTarget);
+  });
+}
+
+function scheduleKeeperDive(target, duration) {
+  const skill = state.diff.keeperSkill;
+  let reactionMs;
+  let aimX, aimY;
+  if (state.difficulty === 'easy') {
+    reactionMs = duration * 0.55;
+    // dive random side
+    const corners = [
+      { x: GOAL.x + 40, y: GOAL.y + 60 },
+      { x: GOAL.x + GOAL.w - 40, y: GOAL.y + 60 },
+      { x: GOAL.x + 40, y: GOAL.y + GOAL.h - 40 },
+      { x: GOAL.x + GOAL.w - 40, y: GOAL.y + GOAL.h - 40 },
+    ];
+    const pick = corners[Math.floor(Math.random()*4)];
+    aimX = pick.x; aimY = pick.y;
+  } else if (state.difficulty === 'medium') {
+    reactionMs = duration * 0.30;
+    aimX = target.x + (Math.random()-0.5) * 140;
+    aimY = target.y + (Math.random()-0.5) * 80;
+  } else {
+    reactionMs = duration * 0.18;
+    aimX = target.x + (Math.random()-0.5) * 50;
+    aimY = target.y + (Math.random()-0.5) * 30;
+  }
+  setTimeout(() => {
+    const k = document.getElementById('keeper');
+    const dx = aimX - KEEPER_HOME.x;
+    const dy = aimY - KEEPER_HOME.y;
+    const rot = Math.max(-45, Math.min(45, dx / 5));
+    k.style.transform = `translate(${dx}px, ${Math.min(20, dy)}px) rotate(${rot}deg)`;
+    state.keeperReach = { x: aimX, y: aimY, r: state.difficulty === 'hard' ? 70 : (state.difficulty === 'medium' ? 60 : 50) };
+  }, reactionMs);
+}
+
+//============================ KEEPER FLOW (you defend) =============================
+function startKeeperRound() {
+  // generate CPU shot plan
+  const err = state.diff.cpuShotErr;
+  const tx = GOAL.x + 30 + Math.random() * (GOAL.w - 60);
+  const ty = GOAL.y + 20 + Math.random() * (GOAL.h - 40);
+  // power 0.4..0.95
+  const pow = 0.4 + Math.random() * 0.55;
+  // curve -0.6..0.6 weighted by err
+  const curve = (Math.random() - 0.5) * 1.4 * (1 - err*0.5);
+  const dx = tx - SPOT.x;
+  const dy = ty - SPOT.y;
+  const mid = { x: (SPOT.x + tx) / 2, y: (SPOT.y + ty) / 2 };
+  const perp = { x: -(ty - SPOT.y), y: (tx - SPOT.x) };
+  const plen = Math.hypot(perp.x, perp.y) || 1;
+  const offsetMag = curve * 140;
+  const ctrl = { x: mid.x + (perp.x / plen) * offsetMag, y: mid.y + (perp.y / plen) * offsetMag };
+  const duration = 1100 - pow * 650;
+
+  state.cpuShotPlan = { target: {x:tx,y:ty}, ctrl, duration, pow, curve };
+
+  // show DIVE prompt with countdown then enable click-anywhere-in-goal
+  const prompt = document.getElementById('divePrompt');
+  prompt.textContent = 'GET READY...';
+  prompt.classList.remove('hidden');
+  const window_ = state.diff.diveWindow;
+  setTimeout(() => {
+    prompt.textContent = 'DIVE!';
+    state.phase = 'keep_dive';
+    state.diveDeadline = performance.now() + window_;
+    enableDiveClick();
+    // auto-fail if no dive
+    state.diveTimeout = setTimeout(() => {
+      if (state.phase === 'keep_dive') {
+        // missed dive — keeper stays home
+        state.diveTarget = { x: KEEPER_HOME.x, y: KEEPER_HOME.y };
+        executeCpuShot();
+      }
+    }, window_);
+  }, 700);
+}
+
+function enableDiveClick() {
+  const pitch = document.getElementById('pitchArea');
+  const svg = pitch.querySelector('svg');
+  function onClick(e) {
+    const rect = svg.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 800;
+    const y = ((e.clientY - rect.top) / rect.height) * 450;
+    state.diveTarget = { x, y };
+    clearTimeout(state.diveTimeout);
+    pitch.removeEventListener('click', onClick);
+    // move keeper
+    const k = document.getElementById('keeper');
+    const dx = x - KEEPER_HOME.x;
+    const dy = y - KEEPER_HOME.y;
+    const rot = Math.max(-45, Math.min(45, dx / 5));
+    k.style.transform = `translate(${dx}px, ${Math.min(20, dy)}px) rotate(${rot}deg)`;
+    executeCpuShot();
+  }
+  pitch.addEventListener('click', onClick);
+}
+
+function executeCpuShot() {
+  document.getElementById('divePrompt').classList.add('hidden');
+  state.phase = 'animating_keep';
+  const plan = state.cpuShotPlan;
+  animateBall(SPOT, plan.ctrl, plan.target, plan.duration, () => {
+    // resolution: was diveTarget within reach of final ball pos?
+    const reach = state.difficulty === 'hard' ? 55 : (state.difficulty === 'medium' ? 65 : 75);
+    const d = Math.hypot(state.diveTarget.x - plan.target.x, state.diveTarget.y - plan.target.y);
+    const inGoal = plan.target.x > GOAL.x && plan.target.x < GOAL.x + GOAL.w && plan.target.y > GOAL.y && plan.target.y < GOAL.y + GOAL.h;
+    const saved = d < reach || !inGoal;
+    const goal = !saved && inGoal;
+    state.kicks.push({ team: 'B', goal });
+    if (goal) state.teamB++;
+    state.turnIdx++;
+    if (goal && plan.pow > 0.75) triggerShake();
+    setTimeout(resetForNext, 700);
+  });
+}
+
+//============================ BALL ANIMATION =============================
+function bezier(p0,p1,p2,t) {
+  const u = 1 - t;
+  return {
+    x: u*u*p0.x + 2*u*t*p1.x + t*t*p2.x,
+    y: u*u*p0.y + 2*u*t*p1.y + t*t*p2.y,
+  };
+}
+function animateBall(p0, p1, p2, duration, done) {
+  const ball = document.getElementById('ball');
+  const start = performance.now();
+  function step(now) {
+    const t = Math.min(1, (now - start) / duration);
+    const p = bezier(p0, p1, p2, t);
+    const scale = 1 + t * 0.6;
+    const dx = p.x - SPOT.x;
+    const dy = p.y - SPOT.y;
+    ball.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`;
+    if (t < 1) requestAnimationFrame(step);
+    else done && done();
+  }
+  requestAnimationFrame(step);
+}
+
+function resolveShot(team, finalTarget) {
+  // is it on target?
+  const inGoal = finalTarget.x > GOAL.x && finalTarget.x < GOAL.x + GOAL.w && finalTarget.y > GOAL.y && finalTarget.y < GOAL.y + GOAL.h;
+  let saved = false;
+  if (inGoal && state.keeperReach) {
+    const d = Math.hypot(state.keeperReach.x - finalTarget.x, state.keeperReach.y - finalTarget.y);
+    if (d < state.keeperReach.r) saved = true;
+  }
+  const goal = inGoal && !saved;
+  state.kicks.push({ team: 'A', goal });
+  if (goal) state.teamA++;
+  state.turnIdx++;
+  state.keeperReach = null;
+  if (goal && state.pow > 0.75) triggerShake();
+  setTimeout(resetForNext, 800);
+}
+
+function resetForNext() {
+  // hide meters, crosshair, reset ball + keeper home
+  document.getElementById('meters').classList.add('hidden');
+  document.getElementById('crosshair').classList.add('hidden');
+  document.getElementById('ball').style.transform = '';
+  document.getElementById('keeper').style.transform = '';
+  state.target = state.acc = state.pow = state.curve = null;
+  renderScoreBar();
+  nextTurn();
+}
+
+function triggerShake() {
+  document.body.classList.add('shake-mild');
+  setTimeout(() => document.body.classList.remove('shake-mild'), 240);
+}
+
+//============================ MATCH END =============================
+function endMatch() {
+  state.over = true;
+  const won = state.teamA > state.teamB;
+  const ptsDelta = won ? state.diff.winPts : state.diff.lossPts;
+  // record
+  submitResult(ptsDelta, won).finally(() => {
+    showResult(won, ptsDelta);
+  });
+}
+
+function showResult(won, ptsDelta) {
+  const overlay = document.createElement('div');
+  overlay.className = 'result-overlay';
+  overlay.innerHTML = `
+    <div class="result-card">
+      <h2>${won ? 'YOU WIN! 🏆' : 'YOU LOSE 💔'}</h2>
+      <div>Final score: ${state.teamA} – ${state.teamB}</div>
+      <div class="delta" style="color:${ptsDelta>=0?'#16a34a':'#dc2626'}">${ptsDelta>0?'+':''}${ptsDelta} points</div>
+      <button id="closeRes">Show leaderboard</button>
+    </div>
+  `;
+  document.getElementById('app').appendChild(overlay);
+  document.getElementById('closeRes').addEventListener('click', () => {
+    overlay.remove();
+    showLeaderboard();
+  });
+}
+
+//============================ LEADERBOARD =============================
+async function submitResult(ptsDelta, won) {
+  const payload = { name: state.name, country: state.country, pointsDelta: ptsDelta, won, difficulty: state.difficulty };
+  // try remote first
+  try {
+    const r = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) return;
+  } catch (_) { /* fall through */ }
+  // local fallback
+  const key = 'penalty_leaderboard_local';
+  const data = JSON.parse(localStorage.getItem(key) || '{}');
+  const id = `${payload.name}|${payload.country}`;
+  if (!data[id]) data[id] = { name: payload.name, country: payload.country, points: 0, games: 0 };
+  data[id].points += ptsDelta;
+  data[id].games += 1;
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+async function fetchLeaderboard() {
+  try {
+    const r = await fetch('/api/leaderboard');
+    if (r.ok) {
+      const data = await r.json();
+      return { entries: data.entries || [], source: 'remote' };
+    }
+  } catch(_) {}
+  // local
+  const key = 'penalty_leaderboard_local';
+  const data = JSON.parse(localStorage.getItem(key) || '{}');
+  const entries = Object.values(data).sort((a,b) => b.points - a.points).slice(0, 10);
+  return { entries, source: 'local' };
+}
+
+async function showLeaderboard() {
+  const { entries, source } = await fetchLeaderboard();
+  const panel = document.createElement('div');
+  panel.className = 'leaderboard';
+  const rows = entries.length ? entries.map((e, i) => {
+    const me = e.name === state.name && e.country === state.country;
+    const flag = (COUNTRIES.find(c => c[0] === e.country) || ['',''])[1];
+    return `<tr class="${me?'me':''}"><td>${i+1}</td><td>${flag} ${escapeHtml(e.name)}</td><td class="num">${e.points}</td><td class="num">${e.games}</td></tr>`;
+  }).join('') : `<tr><td colspan="4" style="opacity:0.6;padding:8px 0">No games yet. You're first!</td></tr>`;
+  panel.innerHTML = `
+    <h3>Leaderboard</h3>
+    <table>
+      <thead><tr><th>#</th><th>Player</th><th>Pts</th><th>GP</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="footer">
+      <span class="source">${source}</span>
+      <button id="lbClose">Play again</button>
+    </div>
+  `;
+  document.getElementById('app').appendChild(panel);
+  document.getElementById('lbClose').addEventListener('click', () => {
+    panel.remove();
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('turnBanner').classList.add('hidden');
+    document.getElementById('setupScreen').classList.remove('hidden');
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+//============================ DEV HELPERS =============================
+window.__forceScore = function(a, b) {
+  state.teamA = a; state.teamB = b;
+  for (let i = 0; i < a; i++) state.kicks.push({team:'A', goal:true});
+  for (let i = 0; i < b; i++) state.kicks.push({team:'B', goal:true});
+  state.turnIdx = a + b;
+  renderScoreBar();
+};
+
+//============================ INIT =============================
+populateCountrySelects();
+</script>
+</body>
+</html>

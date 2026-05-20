@@ -1,0 +1,9 @@
+{
+  "name": "penalty-shootout",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Best-of-five penalty shoot-out game with shared leaderboard.",
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  }
+}
