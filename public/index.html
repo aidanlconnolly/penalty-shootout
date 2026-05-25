@@ -6,9 +6,10 @@
 <title>Penalty Shoot-out</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a1424;user-select:none;}
-#app{position:relative;width:100vw;height:100vh;overflow:hidden;}
-#stage{position:absolute;inset:0;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0a1424;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none;}
+#app{position:relative;width:100vw;height:100dvh;min-height:100vh;overflow:hidden;}
+#stage{position:absolute;inset:0;touch-action:none;}
+button{touch-action:manipulation;}
 body.shake #stage{animation:shake 220ms ease-out;}
 @keyframes shake{0%,100%{transform:translate(0,0);}20%{transform:translate(-3px,1px);}40%{transform:translate(3px,-1px);}60%{transform:translate(-2px,2px);}80%{transform:translate(2px,-2px);}}
 
@@ -77,8 +78,8 @@ body.shake #stage{animation:shake 220ms ease-out;}
 .lb .src{font-size:10px;color:rgba(255,255,255,0.4);}
 
 /* setup */
-.setup{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#1a3a1a,#061206);z-index:50;}
-.card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);border-radius:18px;padding:32px 36px;width:420px;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.setup{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 50% 30%,#1a3a1a,#061206);z-index:50;padding:16px;overflow-y:auto;}
+.card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);backdrop-filter:blur(12px);border-radius:18px;padding:32px 36px;width:100%;max-width:420px;color:#fff;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
 .card h1{margin:0 0 6px;font-size:27px;}
 .card .sub{color:rgba(255,255,255,0.55);font-size:13px;margin-bottom:22px;}
 .card label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.55);margin-bottom:5px;}
@@ -91,6 +92,48 @@ body.shake #stage{animation:shake 220ms ease-out;}
 .go{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,#4ade80,#16a34a);color:#fff;font-size:16px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:0 6px 16px rgba(34,197,94,0.35);}
 .go:hover{transform:translateY(-1px);}
 .hidden{display:none!important;}
+
+/* ── MOBILE ── */
+@media (max-width:640px){
+  .scoreboard{top:8px;gap:10px;padding:7px 14px;border-radius:8px;}
+  .scoreboard::before,.scoreboard::after{display:none;}
+  .tm{font-size:11px;letter-spacing:1px;gap:6px;}
+  .tm .flag{font-size:15px;}
+  .tm .tname{max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;}
+  .dot{width:10px;height:10px;border-width:1px;}
+  .dots{gap:3px;}
+  .vs{font-size:12px;letter-spacing:2px;}
+  #banner{top:54px;font-size:10px;padding:5px 14px;letter-spacing:1.5px;}
+  #powerWrap{bottom:12px;padding:8px 14px;}
+  .bar-v{width:18px;height:64px;}
+  #powerWrap .lbl{font-size:10px;margin-bottom:4px;}
+  #diveHint{padding:12px 18px;}
+  #diveHint .ht{font-size:14px;letter-spacing:1.5px;}
+  #diveTimer{font-size:12px;}
+  .kick-flash{font-size:38px;letter-spacing:2px;}
+  .res-card{min-width:0;width:100%;max-width:320px;padding:24px 24px;margin:0 16px;}
+  .res-card h2{font-size:26px;}
+  .res-card .delta{font-size:16px;}
+  .lb{top:auto;bottom:0;left:0;right:0;border-radius:14px 14px 0 0;min-width:0;max-height:65vh;padding:12px 14px;animation:none;}
+  .lb table{font-size:12px;}
+  .card{padding:22px 22px;border-radius:14px;}
+  .card h1{font-size:22px;}
+  .card .sub{font-size:12px;margin-bottom:16px;}
+  .card input,.card select{padding:9px 11px;font-size:16px;margin-bottom:12px;}
+  .diffs button{padding:9px 4px;font-size:11px;letter-spacing:0.5px;}
+  .go{padding:13px;font-size:15px;}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .scoreboard{top:6px;padding:5px 12px;}
+  #banner{top:42px;}
+  #powerWrap{bottom:8px;padding:6px 12px;}
+  .bar-v{height:54px;}
+  .card{padding:18px 22px;}
+  .card h1{font-size:20px;margin-bottom:2px;}
+  .card .sub{margin-bottom:12px;}
+  .card input,.card select{margin-bottom:10px;padding:8px 10px;}
+  .diffs{margin-bottom:12px;}
+}
 </style>
 </head>
 <body>
@@ -631,6 +674,7 @@ function enableAim(){
     const ty=Math.max(GF.y+BALL_R+2,Math.min(GF.y+GF.h-BALL_R-2,y));
     S.target={x:tx,y:ty};
     svg.removeEventListener('click',_aimClick);
+    e.stopPropagation();
     startPowerMeter();
   };
   svg.addEventListener('click',_aimClick);
@@ -773,14 +817,19 @@ function startKeeperRound(){
   svg.addEventListener('mousedown',onDown);
   window.addEventListener('mousemove',onMove);
   window.addEventListener('mouseup',onUp);
-  // touch
-  svg.addEventListener('touchstart',e=>{if(e.touches[0]){onDown({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:()=>e.preventDefault()});}});
-  window.addEventListener('touchmove',e=>{if(e.touches[0]){onMove({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});}});
+  // touch — passive:false so preventDefault stops the page from scrolling under the drag
+  const onTouchStart=e=>{if(e.touches[0]){e.preventDefault();onDown({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY,preventDefault:()=>{}});}};
+  const onTouchMove=e=>{if(e.touches[0]){e.preventDefault();onMove({clientX:e.touches[0].clientX,clientY:e.touches[0].clientY});}};
+  svg.addEventListener('touchstart',onTouchStart,{passive:false});
+  window.addEventListener('touchmove',onTouchMove,{passive:false});
   window.addEventListener('touchend',onUp);
   S._keeperCleanup=()=>{
     svg.removeEventListener('mousedown',onDown);
     window.removeEventListener('mousemove',onMove);
     window.removeEventListener('mouseup',onUp);
+    svg.removeEventListener('touchstart',onTouchStart);
+    window.removeEventListener('touchmove',onTouchMove);
+    window.removeEventListener('touchend',onUp);
     document.getElementById('scene').classList.remove('dragmode');
   };
 }
