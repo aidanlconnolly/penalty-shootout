@@ -134,6 +134,31 @@ body.shake #stage{animation:shake 220ms ease-out;}
   .card input,.card select{margin-bottom:10px;padding:8px 10px;}
   .diffs{margin-bottom:12px;}
 }
+
+/* aim crosshair pulse */
+#crosshair{pointer-events:none;}
+#crosshair .ring{animation:chpulse 1s ease-in-out infinite;transform-box:fill-box;transform-origin:center;}
+@keyframes chpulse{0%,100%{opacity:0.9;transform:scale(1);}50%{opacity:0.55;transform:scale(1.18);}}
+
+/* stats row on setup card */
+.stats{display:flex;flex-wrap:wrap;gap:6px 12px;margin:-8px 0 18px;font-size:12px;color:rgba(255,255,255,0.6);}
+.stats:empty{display:none;}
+.stats span{font-variant-numeric:tabular-nums;}
+
+/* share button on result card */
+.res-card .btns{display:flex;gap:8px;justify-content:center;margin-top:4px;}
+.res-card .btns button{padding:10px 16px;border-radius:10px;border:none;cursor:pointer;font-weight:700;font-size:14px;}
+.res-card .share{background:#16a34a;color:#fff;}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce){
+  body.shake #stage{animation:none;}
+  .kick-flash{animation:none;opacity:1;}
+  .lb{animation:none;}
+  #keeper{transition:none;}
+  #crosshair .ring{animation:none;}
+  .go:hover{transform:none;}
+}
 </style>
 </head>
 <body>
@@ -461,6 +486,18 @@ body.shake #stage{animation:shake 220ms ease-out;}
   <polygon points="410,402 416,407 413,401" fill="#222" opacity="0.5"/>
   <ellipse cx="392" cy="404" rx="5" ry="3" fill="rgba(255,255,255,0.55)" transform="rotate(-20 392 404)"/>
 </g>
+
+<!-- ── AIM CROSSHAIR (shown during player's shoot_aim phase) ── -->
+<g id="crosshair" class="hidden" transform="translate(400 236)">
+  <g class="ring">
+    <circle r="15" fill="none" stroke="#facc15" stroke-width="2.5"/>
+  </g>
+  <circle r="2.5" fill="#facc15"/>
+  <line x1="-23" y1="0" x2="-10" y2="0" stroke="#facc15" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="10" y1="0" x2="23" y2="0" stroke="#facc15" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="0" y1="-23" x2="0" y2="-10" stroke="#facc15" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="0" y1="10" x2="0" y2="23" stroke="#facc15" stroke-width="2.2" stroke-linecap="round"/>
+</g>
 </svg>
 
 <!-- ── SCOREBOARD HUD ── -->
@@ -492,6 +529,7 @@ body.shake #stage{animation:shake 220ms ease-out;}
   <div class="card">
     <h1>⚽ Penalty Shoot-out</h1>
     <div class="sub">Best of five. Don't blink.</div>
+    <div class="stats" id="statRow"></div>
     <label>Your name</label>
     <input type="text" id="iName" maxlength="24" placeholder="Player 1"/>
     <div class="row">
@@ -522,9 +560,9 @@ const COUNTRIES=[
 ];
 
 const DCFG={
-  easy:  {powSpeed:0.9,  keeperSkill:0.30, cpuErr:0.45, diveMs:1900,  winPts:1,  lossPts:-3},
-  medium:{powSpeed:1.55, keeperSkill:0.55, cpuErr:0.24, diveMs:1600,  winPts:2,  lossPts:-2},
-  hard:  {powSpeed:2.2,  keeperSkill:0.78, cpuErr:0.12, diveMs:1380,  winPts:3,  lossPts:-1},
+  easy:  {powSpeed:0.9,  keeperSkill:0.30, cpuErr:0.45, diveMs:1900,  winPts:1,  lossPts:-3, cpuAim:0.15, cpuPow:0.35},
+  medium:{powSpeed:1.55, keeperSkill:0.55, cpuErr:0.24, diveMs:1600,  winPts:2,  lossPts:-2, cpuAim:0.45, cpuPow:0.50},
+  hard:  {powSpeed:2.2,  keeperSkill:0.78, cpuErr:0.12, diveMs:1380,  winPts:3,  lossPts:-1, cpuAim:0.80, cpuPow:0.65},
 };
 
 // SVG coords (viewBox 800x450)
@@ -547,7 +585,8 @@ function mkState(){
     phase:'setup',
     target:null, pow:null,
     cpuPlan:null, keeperPos:{x:KBASE.x,y:KBASE.y},
-    golden:false,
+    golden:false, _goldenShown:false,
+    aim:{x:GF.x+GF.w/2,y:GF.y+GF.h*0.5},
   };
 }
 
@@ -620,8 +659,9 @@ document.getElementById('goBtn').addEventListener('click',()=>{
 function nextTurn(){
   if(matchOver()) return endMatch();
   renderDots();
+  if(S.golden&&!S._goldenShown){S._goldenShown=true;showFlash('⚡ SUDDEN DEATH',null);}
   if(S.idx%2===0){
-    setBanner('YOUR SHOT — click the goal');
+    setBanner(S.golden?'SUDDEN DEATH — aim & shoot':'YOUR SHOT — aim & click (or arrows + space)');
     S.phase='shoot_aim';
     enableAim();
   } else {
@@ -662,28 +702,79 @@ function matchOver(){
 }
 
 // ─── PLAYER SHOOT ───────────────────────────────────────────────
-let _aimClick;
+function clampAim(x,y){
+  return{
+    x:Math.max(GF.x+BALL_R+2,Math.min(GF.x+GF.w-BALL_R-2,x)),
+    y:Math.max(GF.y+BALL_R+2,Math.min(GF.y+GF.h-BALL_R-2,y)),
+  };
+}
+function showCrosshair(x,y){
+  const c=document.getElementById('crosshair');
+  c.classList.remove('hidden');
+  c.setAttribute('transform',`translate(${x} ${y})`);
+}
+function hideCrosshair(){document.getElementById('crosshair').classList.add('hidden');}
+
 function enableAim(){
   const svg=document.getElementById('scene');
-  _aimClick=e=>{
-    if(S.phase!=='shoot_aim') return;
+  // start crosshair at last/centre aim point
+  S.aim=clampAim(S.aim.x,S.aim.y);
+  showCrosshair(S.aim.x,S.aim.y);
+
+  const toSvg=src=>{
     const r=svg.getBoundingClientRect();
-    const x=((e.clientX-r.left)/r.width)*800;
-    const y=((e.clientY-r.top)/r.height)*450;
-    const tx=Math.max(GF.x+BALL_R+2,Math.min(GF.x+GF.w-BALL_R-2,x));
-    const ty=Math.max(GF.y+BALL_R+2,Math.min(GF.y+GF.h-BALL_R-2,y));
-    S.target={x:tx,y:ty};
-    svg.removeEventListener('click',_aimClick);
-    e.stopPropagation();
+    return clampAim(((src.clientX-r.left)/r.width)*800,((src.clientY-r.top)/r.height)*450);
+  };
+  const preview=p=>{S.aim=p;showCrosshair(p.x,p.y);};
+  const lock=()=>{
+    if(S.phase!=='shoot_aim')return;
+    S.target={x:S.aim.x,y:S.aim.y};
+    teardown();
     startPowerMeter();
   };
-  svg.addEventListener('click',_aimClick);
+  const onMove=e=>{if(S.phase==='shoot_aim')preview(toSvg(e));};
+  const onClick=e=>{if(S.phase!=='shoot_aim')return;preview(toSvg(e));e.stopPropagation();lock();};
+  const onTouch=e=>{if(S.phase==='shoot_aim'&&e.touches[0]){e.preventDefault();preview(toSvg(e.touches[0]));}};
+  const onTouchEnd=e=>{if(S.phase!=='shoot_aim')return;e.preventDefault();lock();};
+  const onKey=e=>{
+    if(S.phase!=='shoot_aim')return;
+    const step=e.shiftKey?6:16;
+    let a={x:S.aim.x,y:S.aim.y};
+    if(e.key==='ArrowLeft')a.x-=step;
+    else if(e.key==='ArrowRight')a.x+=step;
+    else if(e.key==='ArrowUp')a.y-=step;
+    else if(e.key==='ArrowDown')a.y+=step;
+    else if(e.key===' '||e.key==='Enter'){e.preventDefault();lock();return;}
+    else return;
+    e.preventDefault();
+    preview(clampAim(a.x,a.y));
+  };
+  function teardown(){
+    svg.removeEventListener('mousemove',onMove);
+    svg.removeEventListener('click',onClick);
+    svg.removeEventListener('touchstart',onTouch);
+    svg.removeEventListener('touchmove',onTouch);
+    svg.removeEventListener('touchend',onTouchEnd);
+    window.removeEventListener('keydown',onKey);
+    hideCrosshair();
+    S._aimTeardown=null;
+  }
+  svg.addEventListener('mousemove',onMove);
+  svg.addEventListener('click',onClick);
+  svg.addEventListener('touchstart',onTouch,{passive:false});
+  svg.addEventListener('touchmove',onTouch,{passive:false});
+  svg.addEventListener('touchend',onTouchEnd,{passive:false});
+  window.addEventListener('keydown',onKey);
+  S._aimTeardown=teardown;
 }
 
 function startPowerMeter(){
   S.phase='shoot_pow';
   S.pow=null;
-  setBanner('Lock POWER (click)');
+  // Guard: ignore any click synthesized from the aim tap/gesture that just locked.
+  S._powArmed=false;
+  setTimeout(()=>{if(S)S._powArmed=true;},180);
+  setBanner('Lock POWER (click / space)');
   document.getElementById('powerWrap').classList.remove('hidden');
   document.getElementById('powMk').style.bottom='0px';
   const start=performance.now();
@@ -701,7 +792,7 @@ function startPowerMeter(){
 document.getElementById('app').addEventListener('click',e=>{
   if(!S) return;
   if(e.target.closest('#setupScreen')||e.target.closest('.res-ov')||e.target.closest('.lb')) return;
-  if(S.phase==='shoot_pow'){
+  if(S.phase==='shoot_pow'&&S._powArmed){
     const v=parseFloat(document.getElementById('powMk').style.bottom)||0;
     S.pow=v/76;
     cancelAnimationFrame(powAnim); powAnim=null;
@@ -764,11 +855,21 @@ function doPlayerShot(){
 
 // ─── PLAYER KEEPS — drag keeper to save ─────────────────────────
 function startKeeperRound(){
-  setBanner('DEFEND — DRAG THE KEEPER!');
-  const err=S.dc.cpuErr;
-  const tx=GF.x+BALL_R+10+Math.random()*(GF.w-BALL_R*2-20);
-  const ty=GF.y+BALL_R+10+Math.random()*(GF.h-BALL_R*2-20);
-  const pow=0.4+Math.random()*0.55;
+  setBanner(S.golden?'SUDDEN DEATH — DEFEND!':'DEFEND — DRAG THE KEEPER!');
+  // Harder difficulty picks goal corners (harder to reach); easier sprays at random.
+  let tx,ty;
+  if(Math.random()<S.dc.cpuAim){
+    const cx=Math.random()<0.5?GF.x+BALL_R+14:GF.x+GF.w-BALL_R-14;
+    const cy=Math.random()<0.65?GF.y+BALL_R+12:GF.y+GF.h-BALL_R-14; // favour top corners
+    tx=cx+(Math.random()-.5)*30;
+    ty=cy+(Math.random()-.5)*24;
+  } else {
+    tx=GF.x+BALL_R+10+Math.random()*(GF.w-BALL_R*2-20);
+    ty=GF.y+BALL_R+10+Math.random()*(GF.h-BALL_R*2-20);
+  }
+  tx=Math.max(GF.x+BALL_R+2,Math.min(GF.x+GF.w-BALL_R-2,tx));
+  ty=Math.max(GF.y+BALL_R+2,Math.min(GF.y+GF.h-BALL_R-2,ty));
+  const pow=S.dc.cpuPow+Math.random()*(1-S.dc.cpuPow)*0.7;
   const dur=1600-pow*750;
   S.cpuPlan={target:{x:tx,y:ty},ctrl:{x:tx,y:(SPOT.y+ty)/2-25},dur,pow};
 
@@ -949,6 +1050,8 @@ function resetRound(){
   cancelAnimationFrame(powAnim); powAnim=null;
   clearInterval(diveCountdown); diveCountdown=null;
   if(S._keeperCleanup){S._keeperCleanup();S._keeperCleanup=null;}
+  if(S._aimTeardown){S._aimTeardown();}
+  hideCrosshair();
   document.getElementById('powerWrap').classList.add('hidden');
   document.getElementById('diveHint').classList.add('hidden');
   document.getElementById('ball').style.transform='';
@@ -967,19 +1070,54 @@ function endMatch(){
   const won=S.scoreA>S.scoreB;
   const pts=won?S.dc.winPts:S.dc.lossPts;
   submitScore(pts,won);
-  setTimeout(()=>showResult(won,pts),400);
+  const st=updateStats(won);
+  setTimeout(()=>showResult(won,pts,st),400);
 }
-function showResult(won,pts){
+function showResult(won,pts,st){
   const ov=document.createElement('div');
   ov.className='res-ov';
+  const streakLine=won&&st.streak>1?`<div class="delta" style="color:#f97316">🔥 ${st.streak} win streak</div>`:'';
   ov.innerHTML=`<div class="res-card">
     <h2>${won?'YOU WIN! 🏆':'YOU LOSE 💔'}</h2>
     <div>Score: ${S.scoreA} – ${S.scoreB}</div>
     <div class="delta" style="color:${pts>=0?'#16a34a':'#dc2626'}">${pts>0?'+':''}${pts} pts</div>
-    <button id="cRes">Show leaderboard</button>
+    ${streakLine}
+    <div class="btns">
+      <button class="share" id="shareRes">Share</button>
+      <button id="cRes">Leaderboard</button>
+    </div>
   </div>`;
   document.getElementById('app').appendChild(ov);
   document.getElementById('cRes').addEventListener('click',()=>{ov.remove();showLB();});
+  document.getElementById('shareRes').addEventListener('click',()=>shareResult(won,pts));
+}
+
+// ─── STATS (local) ──────────────────────────────────────────────
+function loadStats(){try{return JSON.parse(localStorage.getItem('ps_stats')||'{}');}catch(_){return{};}}
+function updateStats(won){
+  const s=loadStats();
+  s.gp=(s.gp||0)+1;
+  s.goals=(s.goals||0)+S.scoreA;
+  if(won){s.wins=(s.wins||0)+1;s.streak=(s.streak||0)+1;s.best=Math.max(s.best||0,s.streak);}
+  else{s.streak=0;}
+  localStorage.setItem('ps_stats',JSON.stringify(s));
+  return s;
+}
+function renderStats(){
+  const s=loadStats(),el=document.getElementById('statRow');
+  if(!el)return;
+  el.innerHTML=s.gp?`<span>🎮 ${s.gp} played</span><span>🏆 ${s.wins||0} won</span><span>🔥 ${s.streak||0} streak</span><span>⭐ best ${s.best||0}</span><span>⚽ ${s.goals||0} goals</span>`:'';
+}
+
+// ─── SHARE ──────────────────────────────────────────────────────
+function shareResult(won,pts){
+  const txt=`⚽ Penalty Shoot-out\n${S.flag} ${S.name} ${S.scoreA}–${S.scoreB} ${S.oppFlag} ${S.oppCountry}\n${won?'WIN 🏆':'LOSS 💔'} on ${S.diff} (${pts>0?'+':''}${pts} pts)\n${location.origin}${location.pathname}`;
+  if(navigator.share){navigator.share({title:'Penalty Shoot-out',text:txt}).catch(()=>{});return;}
+  const btn=document.getElementById('shareRes');
+  const restore=()=>{if(btn)btn.textContent='Share';};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>{if(btn){btn.textContent='Copied!';setTimeout(restore,1500);}}).catch(()=>{if(btn){btn.textContent='Copy failed';setTimeout(restore,1500);}});
+  }else if(btn){btn.textContent='Copy failed';setTimeout(restore,1500);}
 }
 
 // ─── LEADERBOARD ────────────────────────────────────────────────
@@ -1025,11 +1163,13 @@ async function showLB(){
     document.getElementById('hud').classList.add('hidden');
     document.getElementById('banner').classList.add('hidden');
     document.getElementById('setupScreen').classList.remove('hidden');
+    renderStats();
   });
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
 fillSelects();
+renderStats();
 </script>
 </body>
 </html>
